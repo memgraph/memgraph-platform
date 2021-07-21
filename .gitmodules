@@ -1,0 +1,6 @@
+[submodule "mage"]
+	path = mage
+	url = git@github.com:memgraph/mage.git
+[submodule "lab"]
+	path = lab
+	url = git@github.com:memgraph/lab
