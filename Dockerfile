@@ -48,8 +48,17 @@ EXPOSE 7687
 EXPOSE 3000
 RUN apt-get update && apt-get install -y nodejs npm --no-install-recommends
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-RUN usermod -G root memgraph
-RUN chmod 777 -r /
+
+# These commands don't work:
+# RUN usermod -G root memgraph
+# RUN sed -i "$ d" /etc/passwd
+# RUN echo "memgraph:x:0:0::/var/lib/memgraph:/bin/bash" >> /etc/passwd
+
+RUN chmod 777 -R /var/log/memgraph
+RUN chmod 777 -R /var/lib/memgraph
+RUN chmod 777 -R /usr/lib/memgraph
+RUN chmod 777 /usr/lib/memgraph/memgraph
+WORKDIR /
 
 CMD ["/usr/bin/supervisord"]
 
