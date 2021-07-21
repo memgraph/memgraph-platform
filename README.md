@@ -17,7 +17,7 @@
 
 <p align="center">
   <a href="https://github.com/memgraph/memgraph-platform">
-    <img src="https://mislav.dev/assets/img/out.gif" alt="demo" title="demo"/>
+    <img src="" alt="demo" title="demo"/>
   </a>
 </p>
 
