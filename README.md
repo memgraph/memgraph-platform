@@ -39,13 +39,12 @@ TODO
 - remove unneccessary dependencies from lab and mage
 - move everything to a smaller container base image (e.g. alpine)
 - deal better with user permissions for the memgraph user
+- open mgconsole
 
 ## :question: building
-1. download latest `.deb` package from [memgraph.com](https://memgraph.com/dowload)
-2. copy it into this directory `cp ~/downloads/memgraph*.deb .`
-3. run `docker build . -t test --build-arg deb_release=memgraph*.deb`
-4. run `docker run --rm -it -p 3000:3000 -p 7687:7687 test:latest`
-5. go to `http://localhost:3000` and connect to memgraph
+1. run `docker build . -t test`
+2. run `docker run --rm -it -p 3000:3000 -p 7687:7687 test:latest`
+3. go to `http://localhost:3000` and connect to memgraph lab
 
 <p align="center">
   <a href="#">

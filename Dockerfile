@@ -9,7 +9,7 @@ RUN npm run ng build -- \
     --output-path=/lab/angular/dist
 
 # Lab: Build backend
-FROM node:12 AS lab
+FROM node:12-alpine AS lab_backend
 WORKDIR /lab/app
 COPY lab/package*.json ./
 RUN npm install
@@ -18,35 +18,52 @@ COPY lab/tsconfig.json .
 COPY lab/.env .
 RUN npm run build
 
-# Lab: Copy the frontend artifacts
-COPY --from=lab_frontend /lab/angular/dist /lab/app/dist-angular
-
 # Memgraph
 FROM debian
-ARG deb_release
-RUN apt-get -oDebug::pkgAcquire::Worker=1 update
 RUN apt-get update && apt-get install -y \
-    build-essential openssl libcurl4 libssl1.1 python3 libpython3.7 python3-pip supervisor cmake curl git g++ clang \
-    --no-install-recommends
-  # && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-RUN pip3 install networkx==2.4 numpy==1.19.2 scipy==1.5.2
-COPY ${deb_release} /
-RUN dpkg -i ${deb_release}
+    curl \
+    git \
+    libcurl4 \
+    libpython3.7 \
+    libssl1.1 \
+    nodejs \
+    npm \
+    openssl \
+    python3 \
+    python3-pip \
+    supervisor \
+    --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-COPY --from=lab lab /lab
-COPY mage /mage/
-WORKDIR /mage
+RUN pip3 install networkx==2.4 numpy==1.19.2 scipy==1.5.2
+
+RUN curl https://download.memgraph.com/memgraph/v1.6.0/debian-10/memgraph_1.6.0-community-1_amd64.deb --output memgraph.deb \
+  && dpkg -i memgraph.deb \
+  && rm memgraph.deb
+
+# Mage
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
-RUN python3 build
-RUN cp -r /mage/dist/* /usr/lib/memgraph/query_modules/
-# It's required to install python3 because auth module scripts are going to be
-# written in python3.
-RUN python3 -m  pip install -r /mage/python/requirements.txt
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    clang \
+    cmake \
+    g++ \
+    --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
+    && git clone https://github.com/memgraph/mage.git \
+    && cd /mage \
+    && python3 /mage/build \
+    && cp -r /mage/dist/* /usr/lib/memgraph/query_modules/ \
+    && python3 -m  pip install -r /mage/python/requirements.txt
+    # && rm -rf /mage \
+    # && apt-get -y --purge autoremove g++ clang cmake build-essential \
+    # && apt-get clean
 
-EXPOSE 7687
-EXPOSE 3000
-RUN apt-get update && apt-get install -y nodejs npm --no-install-recommends
+COPY --from=lab_backend lab /lab
+COPY --from=lab_frontend /lab/angular/dist /lab/app/dist-angular
+
+EXPOSE 3000 7687
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # These commands don't work:
@@ -58,15 +75,5 @@ RUN chmod 777 -R /var/log/memgraph
 RUN chmod 777 -R /var/lib/memgraph
 RUN chmod 777 -R /usr/lib/memgraph
 RUN chmod 777 /usr/lib/memgraph/memgraph
-WORKDIR /
 
 CMD ["/usr/bin/supervisord"]
-
-# Works for memgraph
-# USER memgraph
-# WORKDIR /usr/lib/memgraph
-# ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
-
-# Works for lab
-# WORKDIR /lab/app
-# CMD [ "npm", "run", "start:prod" ]
