@@ -42,8 +42,6 @@ RUN curl https://download.memgraph.com/memgraph/v1.6.0/debian-10/memgraph_1.6.0-
   && rm memgraph.deb
 
 # Mage
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
-ENV PATH="/root/.cargo/bin:${PATH}"
 RUN apt-get update && apt-get install -y \
     build-essential \
     clang \
@@ -51,14 +49,17 @@ RUN apt-get update && apt-get install -y \
     g++ \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
+    && curl https://sh.rustup.rs -sSf | sh -s -- -y \
+    && export PATH="/root/.cargo/bin:${PATH}" \
     && git clone https://github.com/memgraph/mage.git \
     && cd /mage \
     && python3 /mage/build \
     && cp -r /mage/dist/* /usr/lib/memgraph/query_modules/ \
-    && python3 -m  pip install -r /mage/python/requirements.txt
-    # && rm -rf /mage \
-    # && apt-get -y --purge autoremove g++ clang cmake build-essential \
-    # && apt-get clean
+    && python3 -m  pip install -r /mage/python/requirements.txt \
+    && rm -rf /mage \
+    && rm -rf /root/.rustup/toolchains \
+    && apt-get -y --purge autoremove clang \
+    && apt-get clean
 
 COPY --from=lab_backend lab /lab
 COPY --from=lab_frontend /lab/angular/dist /lab/app/dist-angular
