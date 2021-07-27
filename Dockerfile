@@ -20,18 +20,24 @@ RUN npm run build
 
 # Memgraph
 FROM debian
+COPY --from=lab_backend lab /lab
+COPY --from=lab_frontend /lab/angular/dist /lab/app/dist-angular
+
 RUN apt-get update && apt-get install -y \
-    curl \
-    git \
-    libcurl4 \
-    libpython3.7 \
-    libssl1.1 \
-    nodejs \
-    npm \
-    openssl \
-    python3 \
-    python3-pip \
-    supervisor \
+    build-essential `mage` \
+    cmake           `mage` \
+    curl            `mage memgraph` \
+    g++             `mage` \
+    git             `mage` \
+    libcurl4        `memgraph` \
+    libpython3.7    `memgraph` \
+    libssl1.1       `memgraph` \
+    nodejs          `lab` \
+    npm             `lab` \
+    openssl         `memgraph` \
+    python3         `mage memgraph` \
+    python3-pip     `mage memgraph` \
+    supervisor      `mage memgraph lab` \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -43,10 +49,7 @@ RUN curl https://download.memgraph.com/memgraph/v1.6.0/debian-10/memgraph_1.6.0-
 
 # Mage
 RUN apt-get update && apt-get install -y \
-    build-essential \
     clang \
-    cmake \
-    g++ \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
     && curl https://sh.rustup.rs -sSf | sh -s -- -y \
@@ -61,9 +64,6 @@ RUN apt-get update && apt-get install -y \
     && apt-get -y --purge autoremove clang \
     && apt-get clean
 
-COPY --from=lab_backend lab /lab
-COPY --from=lab_frontend /lab/angular/dist /lab/app/dist-angular
-
 EXPOSE 3000 7687
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
@@ -72,9 +72,12 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 # RUN sed -i "$ d" /etc/passwd
 # RUN echo "memgraph:x:0:0::/var/lib/memgraph:/bin/bash" >> /etc/passwd
 
+# RUN chown -hR root /usr/lib/memgraph
 RUN chmod 777 -R /var/log/memgraph
 RUN chmod 777 -R /var/lib/memgraph
 RUN chmod 777 -R /usr/lib/memgraph
 RUN chmod 777 /usr/lib/memgraph/memgraph
 
-CMD ["/usr/bin/supervisord"]
+# CMD /usr/bin/supervisord
+
+CMD /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf >> /dev/null & sleep 3; /usr/bin/mgconsole
