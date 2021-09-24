@@ -19,7 +19,7 @@ COPY lab/.env .
 RUN npm run build
 
 # Memgraph
-FROM debian
+FROM debian:buster
 COPY --from=lab_backend lab /lab
 COPY --from=lab_frontend /lab/angular/dist /lab/app/dist-angular
 
@@ -29,6 +29,7 @@ RUN apt-get update && apt-get install -y \
     curl            `mage memgraph` \
     g++             `mage` \
     git             `mage` \
+    netcat          `memgraph` \
     libcurl4        `memgraph` \
     libpython3.7    `memgraph` \
     libssl1.1       `memgraph` \
@@ -37,6 +38,7 @@ RUN apt-get update && apt-get install -y \
     openssl         `memgraph` \
     python3         `mage memgraph` \
     python3-pip     `mage memgraph` \
+    python3-dev     `mage memgraph` \
     supervisor      `mage memgraph lab` \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -78,6 +80,4 @@ RUN chmod 777 -R /var/lib/memgraph
 RUN chmod 777 -R /usr/lib/memgraph
 RUN chmod 777 /usr/lib/memgraph/memgraph
 
-# CMD /usr/bin/supervisord
-
-CMD /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf >> /dev/null & sleep 3; /usr/bin/mgconsole
+CMD /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf >> /dev/null & while ! nc -z localhost 7687; do sleep 1; done; /usr/bin/mgconsole
