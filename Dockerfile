@@ -46,7 +46,6 @@ RUN apt-get update && apt-get install -y \
 
 RUN pip3 install networkx==2.4 numpy==1.19.2 scipy==1.5.2
 
-# RUN curl https://download.memgraph.com/memgraph/v2.0.0/debian-10/memgraph_2.0.0-1_amd64.deb --output memgraph.deb \
 RUN curl -L download.memgraph.com/memgraph/v2.0.0/debian-10-platform/memgraph_2.0.0+3~a7dab1fd-1_amd64.deb --output memgraph.deb \
   && dpkg -i memgraph.deb \
   && rm memgraph.deb
@@ -72,16 +71,9 @@ RUN apt-get update && apt-get install -y \
 EXPOSE 3000 7687
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# These commands don't work:
-# RUN usermod -G root memgraph
-# RUN sed -i "$ d" /etc/passwd
-# RUN echo "memgraph:x:0:0::/var/lib/memgraph:/bin/bash" >> /etc/passwd
-
-# RUN chown -hR root /usr/lib/memgraph
 RUN chmod 777 -R /var/log/memgraph
 RUN chmod 777 -R /var/lib/memgraph
 RUN chmod 777 -R /usr/lib/memgraph
 RUN chmod 777 /usr/lib/memgraph/memgraph
 
 CMD /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf >> /dev/null & while ! nc -z localhost 7687; do sleep 1; done; /usr/bin/mgconsole
-# CMD /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf >> /dev/null
