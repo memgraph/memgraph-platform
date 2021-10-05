@@ -76,4 +76,5 @@ RUN chmod 777 -R /var/lib/memgraph
 RUN chmod 777 -R /usr/lib/memgraph
 RUN chmod 777 /usr/lib/memgraph/memgraph
 
+ENV MEMGRAPH=""
 CMD /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf >> /dev/null & while ! nc -z localhost 7687; do sleep 1; done; /usr/bin/mgconsole
