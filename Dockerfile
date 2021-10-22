@@ -46,7 +46,7 @@ RUN apt-get update && apt-get install -y \
 
 RUN pip3 install networkx==2.4 numpy==1.19.2 scipy==1.5.2
 
-RUN curl -L download.memgraph.com/memgraph/v2.0.0/debian-10-platform/memgraph_2.0.0+3~a7dab1fd-1_amd64.deb --output memgraph.deb \
+RUN curl -L https://download.memgraph.com/memgraph/v2.0.1/debian-10-platform/memgraph_2.0.1-1_amd64.deb \
   && dpkg -i memgraph.deb \
   && rm memgraph.deb
 
