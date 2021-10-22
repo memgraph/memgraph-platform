@@ -1,20 +1,21 @@
 # Lab: Build frontend
-FROM node:12 AS lab_frontend
+FROM node:16 AS lab_frontend
 WORKDIR /lab/angular
-COPY lab/angular/package*.json /lab/angular/
+COPY lab/angular/package*.json ./
 RUN npm install
-COPY lab/angular/ /lab/angular/
+COPY lab/angular/ ./
 RUN npm run ng build -- \
     --prod \
     --output-path=/lab/angular/dist
 
 # Lab: Build backend
-FROM node:12-alpine AS lab_backend
+FROM node:16-alpine AS lab_backend
 WORKDIR /lab/app
 COPY lab/package*.json ./
-RUN npm install
-COPY lab/lib/ /lab/app/lib/
+RUN npm ci --ignore-scripts
+COPY lab/backend/ ./backend/
 COPY lab/tsconfig.json .
+COPY lab/tsconfig.build.json .
 COPY lab/.env .
 RUN npm run build
 
@@ -46,7 +47,7 @@ RUN apt-get update && apt-get install -y \
 
 RUN pip3 install networkx==2.4 numpy==1.19.2 scipy==1.5.2
 
-RUN curl -L https://download.memgraph.com/memgraph/v2.0.1/debian-10-platform/memgraph_2.0.1-1_amd64.deb \
+RUN curl -L https://download.memgraph.com/memgraph/v2.0.1/debian-10-platform/memgraph_2.0.1-1_amd64.deb > memgraph.deb \
   && dpkg -i memgraph.deb \
   && rm memgraph.deb
 
