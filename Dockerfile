@@ -35,15 +35,16 @@ RUN apt-get update && apt-get install -y \
     libcurl4        \
     libpython3.7    \
     libssl1.1       \
-    nodejs          \
-    npm             \
     openssl         \
     python3         \
     python3-pip     \
     python3-dev     \
     supervisor      \
-    --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    --no-install-recommends
+
+RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - \
+  && apt-get install -y nodejs \
+  && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 RUN pip3 install networkx==2.4 numpy==1.19.2 scipy==1.5.2
 
