@@ -1,20 +1,21 @@
 # Lab: Build frontend
-FROM node:12 AS lab_frontend
+FROM node:16 AS lab_frontend
 WORKDIR /lab/angular
-COPY lab/angular/package*.json /lab/angular/
+COPY lab/angular/package*.json ./
 RUN npm install
-COPY lab/angular/ /lab/angular/
+COPY lab/angular/ ./
 RUN npm run ng build -- \
     --prod \
     --output-path=/lab/angular/dist
 
 # Lab: Build backend
-FROM node:12-alpine AS lab_backend
+FROM node:16-alpine AS lab_backend
 WORKDIR /lab/app
 COPY lab/package*.json ./
-RUN npm install
-COPY lab/lib/ /lab/app/lib/
+RUN npm ci --ignore-scripts
+COPY lab/backend/ ./backend/
 COPY lab/tsconfig.json .
+COPY lab/tsconfig.build.json .
 COPY lab/.env .
 RUN npm run build
 
@@ -34,19 +35,20 @@ RUN apt-get update && apt-get install -y \
     libcurl4        \
     libpython3.7    \
     libssl1.1       \
-    nodejs          \
-    npm             \
     openssl         \
     python3         \
     python3-pip     \
     python3-dev     \
     supervisor      \
-    --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    --no-install-recommends
+
+RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - \
+  && apt-get install -y nodejs \
+  && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 RUN pip3 install networkx==2.4 numpy==1.19.2 scipy==1.5.2
 
-RUN curl -L https://download.memgraph.com/memgraph/v2.0.1/debian-10-platform/memgraph_2.0.1-1_amd64.deb \
+RUN curl -L https://download.memgraph.com/memgraph/v2.0.1/debian-10-platform/memgraph_2.0.1-1_amd64.deb > memgraph.deb \
   && dpkg -i memgraph.deb \
   && rm memgraph.deb
 
@@ -59,7 +61,7 @@ RUN apt-get update && apt-get install -y \
     && export PATH="/root/.cargo/bin:${PATH}" \
     && git clone https://github.com/memgraph/mage.git \
     && cd /mage \
-    && git checkout new_query_modules_api \
+    && git checkout main \
     && python3 /mage/setup all \
     && cp -r /mage/dist/* /usr/lib/memgraph/query_modules/ \
     && python3 -m  pip install -r /mage/python/requirements.txt \
