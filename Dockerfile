@@ -61,7 +61,7 @@ RUN apt-get update && apt-get install -y \
     && export PATH="/root/.cargo/bin:${PATH}" \
     && git clone https://github.com/memgraph/mage.git \
     && cd /mage \
-    && git checkout new_query_modules_api \
+    && git checkout main \
     && python3 /mage/setup all \
     && cp -r /mage/dist/* /usr/lib/memgraph/query_modules/ \
     && python3 -m  pip install -r /mage/python/requirements.txt \
