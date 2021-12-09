@@ -49,6 +49,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - \
 RUN pip3 install networkx==2.4 numpy==1.19.2 scipy==1.5.2
 
 RUN curl -L https://download.memgraph.com/memgraph/v2.1.1/debian-10-platform/memgraph_2.1.1-1_amd64.deb > memgraph.deb \
+
   && dpkg -i memgraph.deb \
   && rm memgraph.deb
 
