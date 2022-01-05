@@ -48,7 +48,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - \
 
 RUN pip3 install networkx==2.4 numpy==1.19.2 scipy==1.5.2
 
-RUN curl -L https://download.memgraph.com/memgraph/v2.1.0/debian-10-platform/memgraph_2.1.0-1_amd64.deb > memgraph.deb \
+RUN curl -L https://download.memgraph.com/memgraph/v2.1.1/debian-10-platform/memgraph_2.1.1-1_amd64.deb > memgraph.deb \
   && dpkg -i memgraph.deb \
   && rm memgraph.deb
 
@@ -79,4 +79,4 @@ RUN chmod 777 -R /usr/lib/memgraph
 RUN chmod 777 /usr/lib/memgraph/memgraph
 
 ENV MEMGRAPH=""
-CMD /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf >> /dev/null & while ! nc -z localhost 7687; do sleep 1; done; /usr/bin/mgconsole
+CMD /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf >> /dev/null & echo "Memgraph Lab is running at localhost:3000\n"; while ! nc -z localhost 7687; do sleep 1; done; /usr/bin/mgconsole
