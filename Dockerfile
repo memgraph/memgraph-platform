@@ -24,7 +24,14 @@ FROM debian:buster
 COPY --from=lab_backend lab /lab
 COPY --from=lab_frontend /lab/angular/dist /lab/app/dist-angular
 
-RUN apt-get update && apt-get install -y \
+# Commented lines solve the issue of hash mismatches withing debian packages
+RUN apt-get clean && \
+    # rm -rf /var/lib/apt/lists/* && \
+    # echo "Acquire::http::Pipeline-Depth 0;\nAcquire::http::No-Cache true;\nAcquire::BrokenProxy    true;" > /etc/apt/apt.conf.d/99fixbadproxy && \
+    # apt-get clean && \
+    apt-get update && \
+    # apt-get upgrade && \
+    apt-get install -f -y \
     python3-setuptools \
     build-essential \
     cmake           \
