@@ -26,13 +26,10 @@ This repository serves as a docker package builder for the Memgraph ecosystem.
 It works by cramming memgraph, memgraph lab, and mage into one container and running processes with supervisor.
 First, it builds memgraph lab in separate node containers and then transfers it to debian, where mage is built on top of a debian package.
 
-## :zap: features
-1. all-in-one
-2. slow
-3. bloat
-
-## :chart_with_upwards_trend: analyse!
-TODO
+Run with
+```
+docker run -it --rm -p 3000:3000 -p 7687:7687 memgraph/memgraph-platform
+```
 
 ## :bulb: TODO
 - ditch mage build tools after building
