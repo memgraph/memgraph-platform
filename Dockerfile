@@ -51,6 +51,8 @@ RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - \
 
 RUN pip3 install networkx==2.4 numpy==1.19.2 scipy==1.5.2
 
+ARG TARGETARCH
+
 # Install memgraph
 COPY memgraph-${TARGETARCH}.deb .
 RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb
