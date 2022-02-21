@@ -37,7 +37,6 @@ jobs:
 
       - name: Build & push docker images
         run: |
-          cd release/docker
           docker buildx build \
           --build-arg BINARY_NAME="memgraph-" \
           --platform linux/amd64,linux/arm64 \
