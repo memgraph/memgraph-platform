@@ -19,7 +19,6 @@ COPY lab/tsconfig.build.json .
 COPY lab/.env .
 RUN npm run build
 
-# Memgraph
 FROM debian:bullseye
 COPY --from=lab_backend lab /lab
 COPY --from=lab_frontend /lab/angular/dist /lab/app/dist-angular
@@ -49,7 +48,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - \
   && apt-get install -y nodejs \
   && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN pip3 install networkx==2.4 numpy==1.19.2 scipy==1.5.2
+RUN pip3 install networkx==2.4 numpy==1.21.4 scipy==1.7.3
 
 ARG TARGETARCH
 
