@@ -15,7 +15,11 @@ jobs:
       DOCKER_ORGANIZATION_NAME: memgraph
       DOCKER_REPOSITORY_NAME: test-memgraph-platform
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+          token: ${{ secrets.PAT }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -37,7 +41,6 @@ jobs:
 
       - name: Build & push docker images
         run: |
-          cd release/docker
           docker buildx build \
           --build-arg BINARY_NAME="memgraph-" \
           --platform linux/amd64,linux/arm64 \

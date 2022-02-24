@@ -19,12 +19,10 @@ COPY lab/tsconfig.build.json .
 COPY lab/.env .
 RUN npm run build
 
-# Memgraph
 FROM debian:bullseye
 COPY --from=lab_backend lab /lab
 COPY --from=lab_frontend /lab/angular/dist /lab/app/dist-angular
 
-# Commented lines solve the issue of hash mismatches withing debian packages
 RUN apt-get clean && \
   apt-get update && \
   apt-get install -f -y \
@@ -49,7 +47,9 @@ RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - \
   && apt-get install -y nodejs \
   && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN pip3 install networkx==2.4 numpy==1.19.2 scipy==1.5.2
+RUN pip3 install networkx==2.4 numpy==1.21.4 scipy==1.7.3
+
+ARG TARGETARCH
 
 # Install memgraph
 COPY memgraph-${TARGETARCH}.deb .
@@ -57,14 +57,14 @@ RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb
 
 # Mage
 RUN apt-get update && apt-get install -y \
-  clang \
+  clang uuid-dev \
   --no-install-recommends \
-  && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
-  && curl https://sh.rustup.rs -sSf | sh -s -- -y \
-  && export PATH="/root/.cargo/bin:${PATH}" \
-  && git clone https://github.com/memgraph/mage.git \
-  && cd /mage \
-  && git checkout main \
+  && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+ENV PATH="${PATH}:/root/.cargo/bin"
+
+COPY mage /mage
+RUN cd /mage \
   && python3 /mage/setup all \
   && cp -r /mage/dist/* /usr/lib/memgraph/query_modules/ \
   && python3 -m  pip install -r /mage/python/requirements.txt \
