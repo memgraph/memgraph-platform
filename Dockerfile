@@ -81,4 +81,6 @@ RUN chmod 777 -R /usr/lib/memgraph
 RUN chmod 777 /usr/lib/memgraph/memgraph
 
 ENV MEMGRAPH=""
-CMD /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf >> /dev/null & echo "Memgraph Lab is running at localhost:3000\n"; while ! nc -z localhost 7687; do sleep 1; done; /usr/bin/mgconsole
+ENV MGCONSOLE=""
+
+CMD /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf >> /dev/null & echo "Memgraph Lab is running at localhost:3000\n"; while ! nc -z localhost 7687; do sleep 1; done; /usr/bin/mgconsole $MGCONSOLE

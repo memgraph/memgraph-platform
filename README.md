@@ -1,7 +1,7 @@
 <p align="center">
   <img src="https://uploads-ssl.webflow.com/5e7ceb09657a69bdab054b3a/5e7ceb09657a6937ab054bba_Black_Original%20_Logo.png" width="300"/>
 </p>
-<p align="center">Download everything you need to run Memgraph.</p>
+<p align="center">Download everything you need to run Memgraph in one Docker image.</p>
 
 <p align="center">
   <a href="https://github.com/memgraph/memgraph-platform/LICENSE">
@@ -15,33 +15,55 @@
   </a>
 </p>
 
-<p align="center">
-  <a href="https://github.com/memgraph/memgraph-platform">
-    <img src="" alt="demo" title="demo"/>
-  </a>
-</p>
+## :clipboard: Description
 
-## :clipboard: description
 This repository serves as a docker package builder for the Memgraph ecosystem.
-It works by cramming memgraph, memgraph lab, and mage into one container and running processes with supervisor.
-First, it builds memgraph lab in separate node containers and then transfers it to debian, where mage is built on top of a debian package.
+It works by combining
+[MemgraphDB](https://github.com/memgraph/memgraph-platform), [Memgraph
+Lab](https://github.com/memgraph/lab),
+[mgconsole](https://github.com/memgraph/mgconsole) and
+[MAGE](https://github.com/memgraph/mage) into one container and running the
+processes with supervisor. First, it builds Memgraph Lab in separate node
+containers and then transfers it to Debian, where MAGE is built on top of a
+Debian package.
 
-Run with
+You can start Memgraph Platform with:
+
 ```
 docker run -it --rm -p 3000:3000 -p 7687:7687 memgraph/memgraph-platform
 ```
 
-## :bulb: TODO
-- ditch mage build tools after building
-- remove unneccessary dependencies from lab and mage
-- move everything to a smaller container base image (e.g. alpine)
-- deal better with user permissions for the memgraph user
-- open mgconsole
+## :question: Building the image
 
-## :question: building
-1. run `docker build . -t test`
-2. run `docker run --rm -it -p 3000:3000 -p 7687:7687 test:latest`
-3. go to `http://localhost:3000` and connect to memgraph lab
+### Prerequisites
+
+1. clone the `memgraph/lab` and `memgraph/mage` repositories with the following
+   commands:
+
+```
+git clone https://github.com/memgraph/lab.git
+git clone https://github.com/memgraph/mage.git
+```
+
+2. Download the appropriate MemgraphDB package to the repository root with one
+   of the following commands:
+
+```
+# amd64 architecture
+curl -L https://download.memgraph.com/memgraph/v<MEMGRAPH_VERSION>/debian-11/memgraph_<MEMGRAPH_VERSION>-1_amd64.deb > memgraph-amd64.deb
+
+# aarch64 architecture
+curl -L https://download.memgraph.com/memgraph/v<MEMGRAPH_VERSION>/debian-11-aarch64/memgraph_<MEMGRAPH_VERSION>-1_aarch64.deb > memgraph-arm64.deb
+```
+
+Don't forget to replace `<MEMGRAPH_VERSION>` with the desired version.
+
+### Docker build
+
+1. Run `docker build . -t test`
+2. Run `docker run --rm -it -p 3000:3000 -p 7687:7687 test:latest`
+3. Go to `http://localhost:3000` and connect to MemgrpahDB with Memgraph Lab in
+   order to test it out
 
 <p align="center">
   <a href="#">
