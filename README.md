@@ -33,6 +33,15 @@ You can start Memgraph Platform with:
 docker run -it --rm -p 3000:3000 -p 7687:7687 memgraph/memgraph-platform
 ```
 
+## Versioning
+
+We have decided that major and minor versions of Memgraph Platform will follow
+Memgraph versioning. And the patch version will be followed with any
+update from Mage or Memgraph Lab.
+
+In other words if we have `memgraph-platform:2.2.0`, it means it contains Memgraph
+2.2 version and compatible versions of Mage and Memgraph Lab.
+
 ## :question: Building the image
 
 ### Prerequisites
