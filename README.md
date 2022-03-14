@@ -4,11 +4,10 @@
 <p align="center">Download everything you need to run Memgraph in one Docker image.</p>
 
 <p align="center">
-  <a href="https://github.com/memgraph/memgraph-platform/LICENSE">
-    <img src="https://img.shields.io/github/license/memgraph/memgraph-platform" alt="license" title="license"/>
-  </a>
-  <a href="https://github.com/memgraph/memgraph-platform">
-    <img src="https://img.shields.io/github/languages/code-size/memgraph/memgraph-platform" alt="build" title="build"/>
+  <a href="https://github.com/memgraph/memgraph-platform/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/memgraph/memgraph-platform?style=plastic" alt="license" title="license"/>
+  <a href="https://hub.docker.com/r/memgraph/memgraph-platform">
+    <img src="https://img.shields.io/docker/v/memgraph/memgraph-platform" alt="dockerhub" title="dockerhub"/>
   </a>
 </p>
 
