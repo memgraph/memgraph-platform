@@ -65,12 +65,12 @@ ENV PATH="${PATH}:/root/.cargo/bin"
 
 COPY mage /mage
 RUN cd /mage \
-  && python3 /mage/setup all \
-  && cp -r /mage/dist/* /usr/lib/memgraph/query_modules/ \
+  && python3 setup build -p /usr/lib/memgraph/query_modules/ \
   && python3 -m  pip install -r /mage/python/requirements.txt \
   && rm -rf /root/.rustup/toolchains \
   && apt-get -y --purge autoremove clang \
-  && apt-get clean
+  && apt-get clean \
+  && rm -rf /mage
 
 EXPOSE 3000 7687
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
