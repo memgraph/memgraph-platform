@@ -1,28 +1,42 @@
-# Lab: Build frontend
-FROM node:16 AS lab_frontend
-WORKDIR /lab/angular
-COPY lab/angular/package*.json ./
-RUN npm install
-COPY lab/angular/ ./
-RUN npm run ng build -- \
-  --prod \
-  --output-path=/lab/angular/dist
-
 # Lab: Build backend
-FROM node:16-alpine AS lab_backend
-WORKDIR /lab/app
+FROM node:16-alpine as lab-base
+
+WORKDIR /app
+
+RUN apk update && apk add git
+ARG NPM_PACKAGE_TOKEN
+
+COPY lab/frontend/.npmrc ./frontend/
+COPY lab/frontend/package*.json ./frontend/
+RUN echo '//npm.pkg.github.com/:_authToken=${NPM_PACKAGE_TOKEN}' | tee -a ./frontend/.npmrc
+
 COPY lab/package*.json ./
-RUN npm ci --ignore-scripts
-COPY lab/backend/ ./backend/
+
+RUN npm install && npm cache clean --force
+RUN rm -f ./frontend/.npmrc
+
 COPY lab/tsconfig.json .
 COPY lab/tsconfig.build.json .
 COPY lab/.env .
+
+COPY lab/backend/ ./backend/
+COPY lab/frontend/ ./frontend/
+
 RUN npm run build
 
-FROM debian:bullseye
-COPY --from=lab_backend lab /lab
-COPY --from=lab_frontend /lab/angular/dist /lab/app/dist-angular
+RUN cd frontend && npm run build:production
 
+FROM debian:bullseye
+# Copy the backend artifacts
+COPY --from=lab-base /app/dist-backend /lab/dist-backend
+COPY --from=lab-base /app/dist-frontend /lab/dist-frontend
+
+COPY --from=lab-base /app/node_modules /lab/node_modules
+COPY --from=lab-base /app/.env /lab/.env
+
+RUN sed -i "s/HOTJAR_IS_ENABLED=false/HOTJAR_IS_ENABLED=true/" /lab/.env
+
+# Building Mage and Memgraph
 RUN apt-get clean && \
   apt-get update && \
   apt-get install -f -y \
