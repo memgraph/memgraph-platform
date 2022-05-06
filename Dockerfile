@@ -2,8 +2,8 @@
 FROM node:16-alpine as lab-base
 
 WORKDIR /app
-
-RUN apk update && apk add git
+# Python and make needed for arm node-gyp package
+RUN apk update && apk add git python3 make
 ARG NPM_PACKAGE_TOKEN
 
 COPY lab/frontend/.npmrc ./frontend/
@@ -12,6 +12,8 @@ RUN echo '//npm.pkg.github.com/:_authToken=${NPM_PACKAGE_TOKEN}' | tee -a ./fron
 
 COPY lab/package*.json ./
 
+RUN npm config rm proxy
+RUN npm config rm https-proxy
 RUN npm install && npm cache clean --force
 RUN rm -f ./frontend/.npmrc
 
