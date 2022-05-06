@@ -3,7 +3,7 @@ name: Release Memgraph Platform
 on:
   workflow_dispatch:
     inputs:
-      version:
+      memgraph_version:
         description: "Version of memgraph to include in release."
         required: true
 
@@ -11,7 +11,6 @@ jobs:
   release:
     runs-on: [self-hosted, Linux, X64, Diff]
     env:
-      MEMGRAPH_VERSION: 2.2.0
       DOCKER_ORGANIZATION_NAME: memgraph
       DOCKER_REPOSITORY_NAME: test-memgraph-platform
     steps:
@@ -39,14 +38,15 @@ jobs:
 
       - name: Download memgraph binaries
         run: |
-          curl -L https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11/memgraph_${MEMGRAPH_VERSION}-1_amd64.deb > memgraph-amd64.deb
-          curl -L https://download.memgraph.com/memgraph/v${MEMGRAPH_VERSION}/debian-11-aarch64/memgraph_${MEMGRAPH_VERSION}-1_aarch64.deb > memgraph-arm64.deb
+          curl -L https://download.memgraph.com/memgraph/v${{ github.event.inputs.memgraph_version }}/debian-11/memgraph_${{ github.event.inputs.memgraph_version }}-1_amd64.deb > memgraph-amd64.deb
+          curl -L https://download.memgraph.com/memgraph/v${{ github.event.inputs.memgraph_version }}/debian-11-aarch64/memgraph_${{ github.event.inputs.memgraph_version }}-1_aarch64.deb > memgraph-arm64.deb
 
       - name: Build & push docker images
         run: |
           docker buildx build \
           --build-arg BINARY_NAME="memgraph-" \
+          --build-arg NPM_PACKAGE_TOKEN="${{ secrets.PAT }}" \
           --platform linux/amd64,linux/arm64 \
-          --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ github.event.inputs.version }} \
+          --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ github.event.inputs.memgraph_version }} \
           --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:latest \
           --push .
