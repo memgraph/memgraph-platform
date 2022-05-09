@@ -2,8 +2,8 @@
 FROM node:16-alpine as lab-base
 
 WORKDIR /app
-# Python and make needed for arm node-gyp package
-RUN apk update && apk add git python3 make
+# Python make and g++ are needed for arm node-gyp package
+RUN apk update && apk add git python3 make g++
 ARG NPM_PACKAGE_TOKEN
 
 COPY lab/frontend/.npmrc ./frontend/
