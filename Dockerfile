@@ -14,6 +14,7 @@ COPY lab/package*.json ./
 
 RUN npm config rm proxy
 RUN npm config rm https-proxy
+RUN npm config set legacy-peer-deps true
 RUN npm install && npm cache clean --force
 RUN rm -f ./frontend/.npmrc
 
