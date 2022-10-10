@@ -3,8 +3,11 @@ name: Release Memgraph Platform
 on:
   workflow_dispatch:
     inputs:
+      memgraph_platform_version:
+        description: "Memgraph Platform version."
+        required: true
       memgraph_version:
-        description: "Version of memgraph to include in release."
+        description: "Memgraph version that will be integrated into platform."
         required: true
       force_release:
         description: >
@@ -18,7 +21,7 @@ jobs:
     runs-on: [self-hosted, Linux, X64, Diff]
     env:
       DOCKER_ORGANIZATION_NAME: memgraph
-      DOCKER_REPOSITORY_NAME: test-memgraph-platform
+      DOCKER_REPOSITORY_NAME: memgraph-platform
     steps:
       - name: Checkout repository and submodules
         uses: actions/checkout@v3
@@ -40,7 +43,7 @@ jobs:
 
       - name: Set Memgraph Platform version
         run: |
-          echo "PLATFORM_VERSION=memgraph{{ github.event.inputs.memgraph_version }}-lab${{ env.MEMGRAPH_LAB_VERSION_ }}-mage${{ env.MEMGRAPH_MAGE_VERSION_ }}" >> $GITHUB_ENV
+          echo "PLATFORM_VERSION=${{ github.event.inputs.memgraph_platform_version }}-memgraph${{ github.event.inputs.memgraph_version }}-lab${{ env.MEMGRAPH_LAB_VERSION_ }}-mage${{ env.MEMGRAPH_MAGE_VERSION_ }}" >> $GITHUB_ENV
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
