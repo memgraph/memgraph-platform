@@ -31,6 +31,19 @@ docker run -it --rm -p 3000:3000 -p 7687:7687 memgraph/memgraph-platform
 
 ## Versioning
 
+New versioning is transparent in a sense that we explicitly state which versions
+of software is included, and it look like this:
+
+`memgraph/memgraph-platform:2.5.0-memgraph2.4-lab2.2.2-mage1.3.5`
+
+and just by looking at each of the versions in platform you can know which
+versions of software it contains without looking at details at release.
+
+### Old (Deprecated)
+
+This versioning is deprecated and was used until 2.4.0 Memgraph Platform
+version.
+
 We have decided that major and minor versions of Memgraph Platform will follow
 Memgraph versioning. And the patch version will be followed with any
 update from Mage or Memgraph Lab, or updates on Memgraph Platform itself.
