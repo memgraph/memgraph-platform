@@ -3,10 +3,15 @@ name: Release Memgraph Platform
 on:
   workflow_dispatch:
     inputs:
+      memgraph_platform_version:
+        description: "Memgraph Platform version."
+        required: true
       memgraph_version:
-        description: "Version of memgraph to include in release."
+        description: "Memgraph version that will be integrated into platform."
         required: true
       force_release:
+        description: >
+          "Force the release despite the version already exists on DockerHub."
         type: boolean
         required: false
         default: false
@@ -21,11 +26,32 @@ jobs:
       - name: Checkout repository and submodules
         uses: actions/checkout@v3
         with:
+          fetch-depth: 0
           submodules: recursive
           token: ${{ secrets.PAT }}
 
+      - name: Get Memgraph Lab release version
+        run: |
+          cd lab
+          git fetch --all --tags
+          MEMGRAPH_LAB_VERSION=$(git rev-parse --verify HEAD | git tag --contains)
+          echo $MEMGRAPH_LAB_VERSION
+          echo "LAB_VERSION=${MEMGRAPH_LAB_VERSION:1}" >> $GITHUB_ENV
+
+      - name: Get Memgraph Mage release version
+        run: |
+          cd mage
+          git fetch --all --tags
+          MEMGRAPH_MAGE_VERSION=$(git rev-parse --verify HEAD | git tag --contains)
+          echo $MEMGRAPH_MAGE_VERSION
+          echo "MAGE_VERSION=${MEMGRAPH_MAGE_VERSION:1}" >> $GITHUB_ENV
+
+      - name: Set Memgraph Platform version
+        run: |
+          echo "PLATFORM_VERSION=${{ github.event.inputs.memgraph_platform_version }}-memgraph${{ github.event.inputs.memgraph_version }}-lab${{ env.LAB_VERSION }}-mage${{ env.MAGE_VERSION }}" >> $GITHUB_ENV
+
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v2
 
       - name: Set up Docker Buildx
         id: buildx
@@ -47,7 +73,7 @@ jobs:
 
       - name: Check if specified version is already pushed
         run: |
-          EXISTS=$(docker manifest inspect $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ github.event.inputs.version }} > /dev/null; echo $?)
+          EXISTS=$(docker manifest inspect $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.PLATFORM_VERSION }} > /dev/null; echo $?)
           echo $EXISTS
           if [[ ${EXISTS} -eq 0 ]]; then
               echo The specified version has been already released to DockerHub!
@@ -67,6 +93,6 @@ jobs:
           --build-arg BINARY_NAME="memgraph-" \
           --build-arg NPM_PACKAGE_TOKEN="${{ secrets.PAT }}" \
           --platform linux/amd64,linux/arm64 \
-          --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ github.event.inputs.memgraph_version }} \
+          --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.PLATFORM_VERSION }} \
           --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:latest \
           --push .
