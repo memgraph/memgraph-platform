@@ -26,24 +26,29 @@ jobs:
       - name: Checkout repository and submodules
         uses: actions/checkout@v3
         with:
+          fetch-depth: 0
           submodules: recursive
           token: ${{ secrets.PAT }}
 
       - name: Get Memgraph Lab release version
         run: |
           cd lab
-          MEMGRAPH_LAB_VERSION_=$(git rev-parse --verify HEAD | git tag --contains)
+          git fetch --all --tags
+          MEMGRAPH_LAB_VERSION=$(git rev-parse --verify HEAD | git tag --contains)
+          echo $MEMGRAPH_LAB_VERSION
           echo "LAB_VERSION=${MEMGRAPH_LAB_VERSION:1}" >> $GITHUB_ENV
 
       - name: Get Memgraph Mage release version
         run: |
           cd mage
-          MEMGRAPH_MAGE_VERSION_=$(git rev-parse --verify HEAD | git tag --contains)
-          echo "MAGE_VERSION=${MEMGRAPH_MAGE_VERSION_:1}" >> $GITHUB_ENV
+          git fetch --all --tags
+          MEMGRAPH_MAGE_VERSION=$(git rev-parse --verify HEAD | git tag --contains)
+          echo $MEMGRAPH_MAGE_VERSION
+          echo "MAGE_VERSION=${MEMGRAPH_MAGE_VERSION:1}" >> $GITHUB_ENV
 
       - name: Set Memgraph Platform version
         run: |
-          echo "PLATFORM_VERSION=${{ github.event.inputs.memgraph_platform_version }}-memgraph${{ github.event.inputs.memgraph_version }}-lab${{ env.MEMGRAPH_LAB_VERSION_ }}-mage${{ env.MEMGRAPH_MAGE_VERSION_ }}" >> $GITHUB_ENV
+          echo "PLATFORM_VERSION=${{ github.event.inputs.memgraph_platform_version }}-memgraph${{ github.event.inputs.memgraph_version }}-lab${{ env.LAB_VERSION }}-mage${{ env.MAGE_VERSION }}" >> $GITHUB_ENV
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
