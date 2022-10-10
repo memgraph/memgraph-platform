@@ -29,20 +29,19 @@ You can start Memgraph Platform with:
 docker run -it --rm -p 3000:3000 -p 7687:7687 memgraph/memgraph-platform
 ```
 
-## Versioning
+## :hourglass: Versioning
 
-New versioning is transparent in a sense that we explicitly state which versions
-of software is included, and it look like this:
+New versioning is transparent in the sense that we explicitly state which
+version of software is included, and it looks like this:
 
 `memgraph/memgraph-platform:2.5.0-memgraph2.4-lab2.2.2-mage1.3.5`
 
-and just by looking at each of the versions in platform you can know which
-versions of software it contains without looking at details at release.
+and just by looking at each of the Memgraph Platform version, you can know which
+versions of software it contains without looking at details in release notes.
 
-### Old (Deprecated)
+### :no_entry_sign: Old (Deprecated)
 
-This versioning is deprecated and was used until 2.4.0 Memgraph Platform
-version.
+This versioning is deprecated and was used until v2.4.0 Memgraph Platform.
 
 We have decided that major and minor versions of Memgraph Platform will follow
 Memgraph versioning. And the patch version will be followed with any
@@ -51,37 +50,12 @@ update from Mage or Memgraph Lab, or updates on Memgraph Platform itself.
 In other words if we have `memgraph-platform:2.2.0`, it means it contains Memgraph
 2.2 version and compatible versions of Mage and Memgraph Lab.
 
-## :question: Building the image
-
-### Prerequisites
-
-1. clone the `memgraph/lab` and `memgraph/mage` repositories with the following
-   commands:
-
-```
-git clone https://github.com/memgraph/lab.git
-git clone https://github.com/memgraph/mage.git
-```
-
-2. Download the appropriate MemgraphDB package to the repository root with one
-   of the following commands:
-
-```
-# amd64 architecture
-curl -L https://download.memgraph.com/memgraph/v<MEMGRAPH_VERSION>/debian-11/memgraph_<MEMGRAPH_VERSION>-1_amd64.deb > memgraph-amd64.deb
-
-# aarch64 architecture
-curl -L https://download.memgraph.com/memgraph/v<MEMGRAPH_VERSION>/debian-11-aarch64/memgraph_<MEMGRAPH_VERSION>-1_aarch64.deb > memgraph-arm64.deb
-```
-
-Don't forget to replace `<MEMGRAPH_VERSION>` with the desired version.
-
-### Docker build
+### :whale: Docker build
 
 1. Run `docker build . -t test`
-2. Run `docker run --rm -it -p 3000:3000 -p 7687:7687 test:latest`
-3. Go to `http://localhost:3000` and connect to MemgrpahDB with Memgraph Lab in
-   order to test it out
+2. Run `docker run --rm -it -p 3000:3000 -p 7687:7687 memgraph-platform:latest`
+3. Go to `http://localhost:3000` and connect to Memgrpah database with Memgraph
+  Lab in order to test it out
 
 <p align="center">
   <a href="#">
