@@ -16,12 +16,15 @@ on:
         required: false
         default: false
 
+# Reason for separating ARM and AMD is speed, buildx is extremely slow when
+# building for ARM on AMD, and it is better to use native ARM machine to build
+# that image
 jobs:
-  release:
+  release-memgraph-platform-amd:
     runs-on: [self-hosted, Linux, X64, Diff]
     env:
       DOCKER_ORGANIZATION_NAME: memgraph
-      DOCKER_REPOSITORY_NAME: memgraph-platform
+      DOCKER_REPOSITORY_NAME: memgraph-platform-test
     steps:
       - name: Checkout repository and submodules
         uses: actions/checkout@v3
@@ -48,7 +51,7 @@ jobs:
 
       - name: Set Memgraph Platform version
         run: |
-          echo "PLATFORM_VERSION=${{ github.event.inputs.memgraph_platform_version }}-memgraph${{ github.event.inputs.memgraph_version }}-lab${{ env.LAB_VERSION }}-mage${{ env.MAGE_VERSION }}" >> $GITHUB_ENV
+          echo "PLATFORM_VERSION=${{ github.event.inputs.memgraph_platform_version }}-memgraph${{ github.event.inputs.memgraph_version }}-lab${{ env.LAB_VERSION }}-mage${{ env.MAGE_VERSION }}-amd" >> $GITHUB_ENV
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
@@ -92,13 +95,12 @@ jobs:
           docker buildx build \
           --build-arg BINARY_NAME="memgraph-" \
           --build-arg NPM_PACKAGE_TOKEN="${{ secrets.PAT }}" \
-          --platform linux/amd64,linux/arm64 \
-          --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.PLATFORM_VERSION }} \
-          --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:latest \
+          --platform linux/amd64 \
+          --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.PLATFORM_VERSION }}-amd \
           --push .
 
-  release-memgraph-platform-without-mage:
-    runs-on: [self-hosted, Linux, X64, Diff]
+  release-memgraph-platform-arm:
+    runs-on: [self-hosted, ARM64]
     env:
       DOCKER_ORGANIZATION_NAME: memgraph
       DOCKER_REPOSITORY_NAME: memgraph-platform
@@ -118,9 +120,17 @@ jobs:
           echo $MEMGRAPH_LAB_VERSION
           echo "LAB_VERSION=${MEMGRAPH_LAB_VERSION:1}" >> $GITHUB_ENV
 
+      - name: Get Memgraph Mage release version
+        run: |
+          cd mage
+          git fetch --all --tags
+          MEMGRAPH_MAGE_VERSION=$(git rev-parse --verify HEAD | git tag --contains)
+          echo $MEMGRAPH_MAGE_VERSION
+          echo "MAGE_VERSION=${MEMGRAPH_MAGE_VERSION:1}" >> $GITHUB_ENV
+
       - name: Set Memgraph Platform version
         run: |
-          echo "PLATFORM_VERSION=${{ github.event.inputs.memgraph_platform_version }}-memgraph${{ github.event.inputs.memgraph_version }}-lab${{ env.LAB_VERSION }}" >> $GITHUB_ENV
+          echo "PLATFORM_VERSION=${{ github.event.inputs.memgraph_platform_version }}-memgraph${{ github.event.inputs.memgraph_version }}-lab${{ env.LAB_VERSION }}-mage${{ env.MAGE_VERSION }}-amd" >> $GITHUB_ENV
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
@@ -159,12 +169,133 @@ jobs:
               echo All good the specified version has not been release to DockerHub
           fi
 
-      - name: Build & push docker image
+      - name: Build & push docker images
         run: |
           docker buildx build \
           --build-arg BINARY_NAME="memgraph-" \
           --build-arg NPM_PACKAGE_TOKEN="${{ secrets.PAT }}" \
-          --platform linux/amd64,linux/arm64 \
-          --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.PLATFORM_VERSION }} \
-          --file memgraph_and_lab.Dockerfile \
+          --platform linux/arm64 \
+          --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.PLATFORM_VERSION }}-arm \
           --push .
+
+  merge-manifests:
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_ORGANIZATION_NAME: memgraph
+      DOCKER_REPOSITORY_NAME: memgraph-platform
+      needs: [release-memgraph-platform-arm, release-memgraph-platform-amd]
+    steps:
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.PAT }}
+
+      - name: Get Memgraph Lab release version
+        run: |
+          cd lab
+          git fetch --all --tags
+          MEMGRAPH_LAB_VERSION=$(git rev-parse --verify HEAD | git tag --contains)
+          echo $MEMGRAPH_LAB_VERSION
+          echo "LAB_VERSION=${MEMGRAPH_LAB_VERSION:1}" >> $GITHUB_ENV
+
+      - name: Get Memgraph Mage release version
+        run: |
+          cd mage
+          git fetch --all --tags
+          MEMGRAPH_MAGE_VERSION=$(git rev-parse --verify HEAD | git tag --contains)
+          echo $MEMGRAPH_MAGE_VERSION
+          echo "MAGE_VERSION=${MEMGRAPH_MAGE_VERSION:1}" >> $GITHUB_ENV
+
+      - name: Set Memgraph Platform version
+        run: |
+          echo "PLATFORM_VERSION=${{ github.event.inputs.memgraph_platform_version }}-memgraph${{ github.event.inputs.memgraph_version }}-lab${{ env.LAB_VERSION }}-mage${{ env.MAGE_VERSION }}-amd" >> $GITHUB_ENV
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Merge manifests
+        run: |
+          docker manifest create $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.PLATFORM_VERSION }} \
+          --amend $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.PLATFORM_VERSION }}-amd \
+          --amend $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.PLATFORM_VERSION }}-arm
+
+          docker manifest push --purge $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.PLATFORM_VERSION }}
+
+
+  # release-memgraph-platform-without-mage:
+  #   runs-on: [self-hosted, Linux, X64, Diff]
+  #   env:
+  #     DOCKER_ORGANIZATION_NAME: memgraph
+  #     DOCKER_REPOSITORY_NAME: memgraph-platform
+  #   steps:
+  #     - name: Checkout repository and submodules
+  #       uses: actions/checkout@v3
+  #       with:
+  #         fetch-depth: 0
+  #         submodules: recursive
+  #         token: ${{ secrets.PAT }}
+
+  #     - name: Get Memgraph Lab release version
+  #       run: |
+  #         cd lab
+  #         git fetch --all --tags
+  #         MEMGRAPH_LAB_VERSION=$(git rev-parse --verify HEAD | git tag --contains)
+  #         echo $MEMGRAPH_LAB_VERSION
+  #         echo "LAB_VERSION=${MEMGRAPH_LAB_VERSION:1}" >> $GITHUB_ENV
+
+  #     - name: Set Memgraph Platform version
+  #       run: |
+  #         echo "PLATFORM_VERSION=${{ github.event.inputs.memgraph_platform_version }}-memgraph${{ github.event.inputs.memgraph_version }}-lab${{ env.LAB_VERSION }}" >> $GITHUB_ENV
+
+  #     - name: Set up QEMU
+  #       uses: docker/setup-qemu-action@v2
+
+  #     - name: Set up Docker Buildx
+  #       id: buildx
+  #       uses: docker/setup-buildx-action@v2
+
+  #     - name: Available platforms
+  #       run: echo ${{ steps.buildx.outputs.platforms }}
+
+  #     - name: Log in to Docker Hub
+  #       uses: docker/login-action@v2
+  #       with:
+  #         username: ${{ secrets.DOCKER_USERNAME }}
+  #         password: ${{ secrets.DOCKER_PASSWORD }}
+
+  #     - name: Download memgraph binaries
+  #       run: |
+  #         curl -L https://download.memgraph.com/memgraph/v${{ github.event.inputs.memgraph_version }}/debian-11/memgraph_${{ github.event.inputs.memgraph_version }}-1_amd64.deb > memgraph-amd64.deb
+  #         curl -L https://download.memgraph.com/memgraph/v${{ github.event.inputs.memgraph_version }}/debian-11-aarch64/memgraph_${{ github.event.inputs.memgraph_version }}-1_arm64.deb > memgraph-arm64.deb
+
+  #     - name: Check if specified version is already pushed
+  #       run: |
+  #         EXISTS=$(docker manifest inspect $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.PLATFORM_VERSION }} > /dev/null; echo $?)
+  #         echo $EXISTS
+  #         if [[ ${EXISTS} -eq 0 ]]; then
+  #             echo The specified version has been already released to DockerHub!
+  #             if [[ ${{ github.event.inputs.force_release }} = true ]]; then
+  #               echo Forcing the release
+  #             else
+  #               echo Stopping the release
+  #               exit 1
+  #             fi
+  #         else
+  #             echo All good the specified version has not been release to DockerHub
+  #         fi
+
+  #     - name: Build & push docker image
+  #       run: |
+  #         docker buildx build \
+  #         --build-arg BINARY_NAME="memgraph-" \
+  #         --build-arg NPM_PACKAGE_TOKEN="${{ secrets.PAT }}" \
+  #         --platform linux/amd64,linux/arm64 \
+  #         --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.PLATFORM_VERSION }} \
+  #         --file memgraph_and_lab.Dockerfile \
+  #         --push .

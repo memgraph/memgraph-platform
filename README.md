@@ -9,6 +9,9 @@
   <a href="https://hub.docker.com/r/memgraph/memgraph-platform">
     <img src="https://img.shields.io/docker/v/memgraph/memgraph-platform" alt="dockerhub" title="dockerhub"/>
   </a>
+    <a href="https://hub.docker.com/r/memgraph/memgraph-platform">
+    <img src="https://img.shields.io/docker/pulls/memgraph/memgraph-platform" alt="dockerhub-pulls" title="dockerhub-pulls"/>
+  </a>
 </p>
 
 ## :clipboard: Description
@@ -22,6 +25,9 @@ Lab](https://github.com/memgraph/lab),
 processes with supervisor. First, it builds Memgraph Lab in separate node
 containers and then transfers it to Debian, where MAGE is built on top of a
 Debian package.
+
+There is also a version without Mage algorithms for those who want minimal image
+with only Memgraph and Memgraph Lab.
 
 You can start Memgraph Platform with:
 
