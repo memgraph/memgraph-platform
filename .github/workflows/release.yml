@@ -231,6 +231,22 @@ jobs:
           $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.PLATFORM_VERSION }}-arm \
           $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.PLATFORM_VERSION }}-amd
 
+      - name: Remove redundant arm
+        run: |
+          ./tools/remove_docker_tag.sh ${{ secrets.DOCKER_USERNAME }} \
+            ${{ secrets.DOCKER_PASSWORD }} \
+            $DOCKER_ORGANIZATION_NAME \
+            $DOCKER_REPOSITORY_NAME \
+            ${{ env.PLATFORM_VERSION }}-arm
+
+      - name: Remove redundant amd
+        run: |
+          ./tools/remove_docker_tag.sh ${{ secrets.DOCKER_USERNAME }} \
+            ${{ secrets.DOCKER_PASSWORD }} \
+            $DOCKER_ORGANIZATION_NAME \
+            $DOCKER_REPOSITORY_NAME \
+            ${{ env.PLATFORM_VERSION }}-amd
+
   # release-memgraph-platform-without-mage:
   #   runs-on: [self-hosted, Linux, X64, Diff]
   #   env:
