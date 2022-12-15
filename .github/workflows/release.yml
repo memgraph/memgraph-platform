@@ -18,7 +18,7 @@ on:
 
 env:
   DOCKER_ORGANIZATION_NAME: memgraph
-  DOCKER_REPOSITORY_NAME: memgraph-platform-test
+  DOCKER_REPOSITORY_NAME: memgraph-platform
 
 # Reason for separating ARM and AMD is speed, buildx is extremely slow when
 # building for ARM on AMD, and it is better to use native ARM machine to build
@@ -231,7 +231,7 @@ jobs:
           $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.PLATFORM_VERSION }}-arm \
           $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.PLATFORM_VERSION }}-amd
 
-      - name: Remove redundant arm
+      - name: Remove redundant ARM
         run: |
           ./tools/remove_docker_tag.sh ${{ secrets.DOCKER_USERNAME }} \
             ${{ secrets.DOCKER_PASSWORD }} \
@@ -239,7 +239,7 @@ jobs:
             $DOCKER_REPOSITORY_NAME \
             ${{ env.PLATFORM_VERSION }}-arm
 
-      - name: Remove redundant amd
+      - name: Remove redundant AMD
         run: |
           ./tools/remove_docker_tag.sh ${{ secrets.DOCKER_USERNAME }} \
             ${{ secrets.DOCKER_PASSWORD }} \
