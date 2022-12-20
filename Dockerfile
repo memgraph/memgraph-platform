@@ -1,3 +1,63 @@
+#MAGE
+ARG PY_VERSION_DEFAULT=3.9
+
+FROM debian:bullseye as base
+
+
+ARG TARGETARCH
+ARG PY_VERSION_DEFAULT
+ENV PY_VERSION ${PY_VERSION_DEFAULT}
+
+#essentials for production/dev
+RUN apt-get update && apt-get install -y \
+    libcurl4        `memgraph` \
+    libpython${PY_VERSION}   `memgraph` \
+    libssl-dev       `memgraph` \
+    openssl         `memgraph` \
+    build-essential `mage-memgraph` \
+    cmake           `mage-memgraph` \
+    curl            `mage-memgraph` \
+    g++             `mage-memgraph` \
+    python3         `mage-memgraph` \
+    python3-pip     `mage-memgraph` \
+    python3-setuptools     `mage-memgraph` \
+    python3-dev     `mage-memgraph` \
+    clang           `mage-memgraph` \
+    git             `mage-memgraph` \
+    supervisor      `memgraph`\
+    netcat         `memgraph-platform` \
+    --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+###################################################################################################################################################
+FROM base as dev
+
+WORKDIR /mage
+COPY mage /mage
+
+
+#MAGE
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
+    && export PATH="/root/.cargo/bin:${PATH}" \
+    && python3 -m  pip install -r /mage/python/requirements.txt \
+    && python3 -m  pip install -r /mage/python/tests/requirements.txt \
+    && python3 -m  pip install torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-1.12.0+cu102.html\
+    && python3 /mage/setup build -p /usr/lib/memgraph/query_modules/
+
+#DGL build from source
+RUN git clone --recurse-submodules https://github.com/dmlc/dgl.git  \
+    && cd dgl && mkdir build && cd build && cmake .. \
+    && make -j4 && cd ../python && python3 setup.py install
+
+
+USER memgraph
+ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
+CMD [""]
+
+
+
+#################################################################################################################################################
+
 # Lab: Build backend
 FROM node:16-alpine as lab-base
 
@@ -29,7 +89,9 @@ RUN npm run build
 
 RUN cd frontend && npm run build:production
 
-FROM debian:bullseye
+
+FROM base as final
+
 # Copy the backend artifacts
 COPY --from=lab-base /app/dist-backend /lab/dist-backend
 COPY --from=lab-base /app/dist-frontend /lab/dist-frontend
@@ -39,55 +101,27 @@ COPY --from=lab-base /app/.env /lab/.env
 
 RUN sed -i "s/HOTJAR_IS_ENABLED=false/HOTJAR_IS_ENABLED=true/" /lab/.env
 
-# Building Mage and Memgraph
-RUN apt-get clean && \
-  apt-get update && \
-  apt-get install -f -y \
-  python3-setuptools \
-  build-essential \
-  cmake           \
-  curl            \
-  g++             \
-  git             \
-  netcat          \
-  libcurl4        \
-  libpython3.7    \
-  libssl1.1       \
-  openssl         \
-  python3         \
-  python3-pip     \
-  python3-dev     \
-  supervisor      \
-  --no-install-recommends
 
-RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - \
-  && apt-get install -y nodejs \
-  && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+ARG PY_VERSION_DEFAULT
+ENV PY_VERSION ${PY_VERSION_DEFAULT}
 
-RUN pip3 install networkx==2.4 numpy==1.21.4 scipy==1.7.3
+#copy modules
+COPY --from=dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules/
 
-ARG TARGETARCH
+#copy python build
+COPY --from=dev /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VERSION}/
 
-# Install memgraph
+
 COPY memgraph-${TARGETARCH}.deb .
+
 RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb
 
-# Mage
-RUN apt-get update && apt-get install -y \
-  clang uuid-dev \
-  --no-install-recommends \
-  && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
-ENV PATH="${PATH}:/root/.cargo/bin"
 
-COPY mage /mage
-RUN cd /mage \
-  && python3 setup build -p /usr/lib/memgraph/query_modules/ \
-  && python3 -m  pip install -r /mage/python/requirements.txt \
-  && rm -rf /root/.rustup/toolchains \
-  && apt-get -y --purge autoremove clang \
-  && apt-get clean \
-  && rm -rf /mage
+RUN rm -rf /mage \
+    && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" \
+    && apt-get -y --purge autoremove clang git curl python3-pip python3-dev cmake build-essential \
+    && apt-get clean
+
 
 EXPOSE 3000 7687
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
