@@ -30,7 +30,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 ###################################################################################################################################################
-FROM base as dev
+
+FROM base as mage-dev
 
 WORKDIR /mage
 COPY mage /mage
@@ -48,13 +49,6 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
 RUN git clone --recurse-submodules https://github.com/dmlc/dgl.git  \
     && cd dgl && mkdir build && cd build && cmake .. \
     && make -j4 && cd ../python && python3 setup.py install
-
-
-USER memgraph
-ENTRYPOINT ["/usr/lib/memgraph/memgraph"]
-CMD [""]
-
-
 
 #################################################################################################################################################
 
@@ -89,6 +83,7 @@ RUN npm run build
 
 RUN cd frontend && npm run build:production
 
+#################################################################################################################################################
 
 FROM base as final
 
@@ -106,10 +101,10 @@ ARG PY_VERSION_DEFAULT
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
 
 #copy modules
-COPY --from=dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules/
+COPY --from=mage-dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules/
 
 #copy python build
-COPY --from=dev /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VERSION}/
+COPY --from=mage-dev /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VERSION}/
 
 
 COPY memgraph-${TARGETARCH}.deb .
