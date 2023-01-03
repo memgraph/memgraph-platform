@@ -96,10 +96,6 @@ COPY --from=lab-base /app/.env /lab/.env
 
 RUN sed -i "s/HOTJAR_IS_ENABLED=false/HOTJAR_IS_ENABLED=true/" /lab/.env
 
-
-ARG PY_VERSION_DEFAULT
-ENV PY_VERSION ${PY_VERSION_DEFAULT}
-
 #copy modules
 COPY --from=mage-dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules/
 
