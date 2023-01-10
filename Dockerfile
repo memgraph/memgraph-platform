@@ -7,7 +7,7 @@ ARG TARGETARCH
 ARG PY_VERSION_DEFAULT
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
 
-# Essentials for production/dev
+# Essentials for production
 RUN apt-get update && apt-get install -y \
     libcurl4        `memgraph` \
     libpython${PY_VERSION}   `memgraph` \
@@ -98,12 +98,13 @@ COPY --from=lab-base /app/node_modules /lab/node_modules
 COPY --from=lab-base /app/.env /lab/.env
 
 # This is needed for lab
-RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - \
+RUN apt-get update \
+    && curl -fsSL https://deb.nodesource.com/setup_16.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # This is needed for memgraph built in algos
-RUN pip3 install networkx==2.4 numpy==1.21.4 scipy==1.7.3
+RUN pip3 install --default-timeout=1000 networkx==2.4 numpy==1.21.4 scipy==1.7.3
 
 RUN sed -i "s/HOTJAR_IS_ENABLED=false/HOTJAR_IS_ENABLED=true/" /lab/.env
 
