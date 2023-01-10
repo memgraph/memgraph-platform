@@ -18,7 +18,7 @@ on:
 
 env:
   DOCKER_ORGANIZATION_NAME: memgraph
-  DOCKER_REPOSITORY_NAME: memgraph-platform
+  DOCKER_REPOSITORY_NAME: memgraph-platform-test
 
 # Reason for separating ARM and AMD is speed, buildx is extremely slow when
 # building for ARM on AMD, and it is better to use native ARM machine to build
