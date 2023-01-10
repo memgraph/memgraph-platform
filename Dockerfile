@@ -1,4 +1,4 @@
-#MAGE
+# For mage
 ARG PY_VERSION_DEFAULT=3.9
 
 FROM debian:bullseye as base
@@ -8,7 +8,7 @@ ARG TARGETARCH
 ARG PY_VERSION_DEFAULT
 ENV PY_VERSION ${PY_VERSION_DEFAULT}
 
-#essentials for production/dev
+# Essentials for production/dev
 RUN apt-get update && apt-get install -y \
     libcurl4        `memgraph` \
     libpython${PY_VERSION}   `memgraph` \
@@ -31,26 +31,25 @@ RUN apt-get update && apt-get install -y \
 
 ###################################################################################################################################################
 
+# MAGE
 FROM base as mage-dev
 
 WORKDIR /mage
 COPY mage /mage
 
-
-#MAGE
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y \
     && export PATH="/root/.cargo/bin:${PATH}" \
     && python3 -m  pip install -r /mage/python/requirements.txt \
-    && python3 -m  pip install -r /mage/python/tests/requirements.txt \
-    && python3 -m  pip install torch-sparse torch-cluster torch-spline-conv torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-1.12.0+cu102.html\
+    && python3 -m  pip --no-cache-dir install  torch-sparse torch-cluster torch-spline-conv \
+    torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-1.12.0+cu102.html \
     && python3 /mage/setup build -p /usr/lib/memgraph/query_modules/
 
-#DGL build from source
+# DGL build from source
 RUN git clone --recurse-submodules https://github.com/dmlc/dgl.git  \
     && cd dgl && mkdir build && cd build && cmake .. \
     && make -j4 && cd ../python && python3 setup.py install
 
-#################################################################################################################################################
+###################################################################################################################################################
 
 # Lab: Build backend
 FROM node:16-alpine as lab-base
@@ -83,7 +82,7 @@ RUN npm run build
 
 RUN cd frontend && npm run build:production
 
-#################################################################################################################################################
+###################################################################################################################################################
 
 FROM base as final
 
@@ -94,6 +93,14 @@ COPY --from=lab-base /app/dist-frontend /lab/dist-frontend
 COPY --from=lab-base /app/node_modules /lab/node_modules
 COPY --from=lab-base /app/.env /lab/.env
 
+# This is needed for lab
+RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# This is needed for memgraph built in algos
+RUN pip3 install networkx==2.4 numpy==1.21.4 scipy==1.7.3
+
 RUN sed -i "s/HOTJAR_IS_ENABLED=false/HOTJAR_IS_ENABLED=true/" /lab/.env
 
 #copy modules
@@ -102,17 +109,14 @@ COPY --from=mage-dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_mo
 #copy python build
 COPY --from=mage-dev /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VERSION}/
 
-
 COPY memgraph-${TARGETARCH}.deb .
 
 RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb
-
 
 RUN rm -rf /mage \
     && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" \
     && apt-get -y --purge autoremove clang git curl python3-pip python3-dev cmake build-essential \
     && apt-get clean
-
 
 EXPOSE 3000 7687
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
@@ -125,4 +129,6 @@ RUN chmod 777 /usr/lib/memgraph/memgraph
 ENV MEMGRAPH=""
 ENV MGCONSOLE=""
 
-CMD /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf >> /dev/null & echo "Memgraph Lab is running at localhost:3000\n"; while ! nc -z localhost 7687; do sleep 1; done; /usr/bin/mgconsole $MGCONSOLE
+CMD /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf >> /dev/null \
+    & echo "Memgraph Lab is running at localhost:3000\n"; \
+    while ! nc -z localhost 7687; do sleep 1; done; /usr/bin/mgconsole $MGCONSOLE
