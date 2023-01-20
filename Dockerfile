@@ -49,7 +49,7 @@ RUN python3 -m pip --default-timeout=1000 --no-cache-dir install torch-sparse to
 RUN python3 /mage/setup build -p /usr/lib/memgraph/query_modules/
 
 # DGL build from source
-RUN git clone --recurse-submodules https://github.com/dmlc/dgl.git  \
+RUN git clone --recurse-submodules -b 0.9.x https://github.com/dmlc/dgl.git  \
     && cd dgl && mkdir build && cd build && cmake .. \
     && make -j4 && cd ../python && python3 setup.py install
 
