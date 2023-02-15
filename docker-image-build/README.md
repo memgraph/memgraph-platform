@@ -44,7 +44,9 @@ This script releases docker image **only** for platform `amd64/linux` arhitectur
 
 ## Creating Platform Docker image
 
-Position yourself in `platforom` folder, make sure you added memgraph debian in `memgraph_deb_files`, configured `ssh` correctly to connect to `github` and run script with following command if you want to build image from local repository:
+> ### Note: Lab is a private repo so this build is unavailable to public. You can still build Memgraph + MAGE above and use downloaded Lab with your image.
+
+Position yourself in `platform` folder, make sure you added memgraph debian in `memgraph_deb_files`, configured `ssh` correctly to connect to `github` and run script with following command if you want to build image from local repository:
 
 ```
 ./create_platform_img.sh .../platform image_name deb_package_name github_pat_token
