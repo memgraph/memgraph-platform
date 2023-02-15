@@ -8,45 +8,45 @@ sudo chmod 777 create_deb.sh
 
 ## Creating Memgraph debian 11 package
 
-To create Memgraph `.deb` file do the following steps:
+To create a Memgraph `.deb` file do the following steps:
 
 1. Position yourself in `memgraph_deb` folder.
-2. Run script `create_db.sh` with following command you can create deb from github repository:
+2. Run the `create_db.sh` script as follows to create the deb from the GitHub repository:
 
     ```console
     $ sudo bash ./create_deb.sh {branch_name} {deb_name}
     ```
-   - `{branch_name}` - use any of the branches from `memgraph` repository, i.e. `master`, `T1220-MG-properties-c++-api-bug`, and so on for script to pull and build `memgraph` from it
-   -   `{deb_name}` determines middle part of final package file.  `.deb` package file name is constructed as follows: `memgraph-{deb_name}_amd64.deb`
+   - `{branch_name}`: any branch from the `memgraph` repo, e.g. `master` or `T1220-MG-properties-c++-api-bug`; for the script to pull and build `memgraph` from it
+   -   `{deb_name}`: used to name the final  `.deb` package file: `memgraph-{deb_name}_amd64.deb`
 
 
-Script stores all `.deb` files inside folder `output_debian`.
+The script stores all `.deb` files in the `output_debian` folder.
 
 ## Creating MAGE Docker image
 
-This script releases docker image **only** for platform `amd64/linux` arhitectures. 
+This script releases docker images **only** for `amd64/linux` platform arhitectures. 
 
-1. Position yourself in `mage_img` folder. 
+1. Position yourself in the `mage_img` folder. 
 
-2. Store memgraph debian package file in `memgraph_deb_files` folder with exact following name `memgraph-{deb_name}.deb` and run script with following command:
+2. Store the memgraph Debian package file in the `memgraph_deb_files` folder with the exact name: `memgraph-{deb_name}.deb` and run the script with the following command:
 
     ```
     ./create_mage_img.sh {path_to_mage|branch_name} {image_name} {deb_name}
     ```
     - `{path_to_mage|branch_name}` 
-    - to build from **local repository**, set first argument to path to MAGE repository, i.e `/home/memgraph/mage/`
-    - to build from MAGE branch, set first argument to branch name, i.e `main`
-    - `{deb_name}` - deb package file name 
-    - `{image_name}` - determines final image name
+    - to build from a **local repository**, set the first argument to the path to the MAGE repository, i.e `/home/memgraph/mage/`
+    - to build from a MAGE branch, set the first argument to the branch name, e.g. `main`
+    - `{deb_name}` - deb package filename 
+    - `{image_name}` - for the final image name
 
-3. Docker image will be stored in folder `output` in `tar.gz` format, for example `{image_name}.tar.gz`. To check how to load image, jump to Loading custom docker image section.
+3. The docker image will be stored in the `output` folder in the `tar.gz` format, e.g. `{image_name}.tar.gz`. To check how to load the image, jump to the [Loading custom docker image](#loading-custom-docker-image) section.
 
 
 ## Creating Platform Docker image
 
 > ### Note: Lab is a private repo so this build is unavailable to public. You can still build Memgraph + MAGE above and use downloaded Lab with your image.
 
-Position yourself in `platform` folder, make sure you added memgraph debian in `memgraph_deb_files`, configured `ssh` correctly to connect to `github` and run script with following command if you want to build image from local repository:
+Position yourself in `platform_img` folder, make sure you added memgraph debian in `memgraph_deb_files`, configured `ssh` correctly to connect to `github` and run script with following command if you want to build image from local repository:
 
 ```
 ./create_platform_img.sh .../platform image_name deb_package_name github_pat_token
