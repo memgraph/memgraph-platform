@@ -48,4 +48,7 @@ jobs:
         run: |
           ./build_mage_img.sh main daily-mage daily-build
 
+      - name: Build platform image
+        run: |
+          ./build_platform_img.sh master daily-build ${{ secrets.PAT }}
 
