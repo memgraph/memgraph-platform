@@ -34,7 +34,7 @@ jobs:
           # Build community binaries.
           cd build
           cmake -DCMAKE_BUILD_TYPE=release -DMG_ENTERPRISE=OFF ..
-          make -j$THREADS memgraph && make -j$THREADS mgconsole
+          make -j$THREADS && make -j$THREADS mgconsole
 
           mkdir -p output
           cd output
