@@ -21,7 +21,7 @@ jobs:
       
       - name: Reset docker cache
         run: |
-          docker buildx prune
+          docker buildx prune && echo "y"
 
       - name: Build community binaries
         run: |
