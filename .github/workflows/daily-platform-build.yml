@@ -5,7 +5,7 @@ on: [pull_request, workflow_dispatch]
 jobs:
   artifacts_build:
     name: "Build artifacts"
-    runs-on: [self-hosted, Linux, X64, Diff]
+    runs-on: [self-hosted, Linux, X64, Diff, Ubuntu20.04]
     env:
       THREADS: 24
       PY_VERSION: "3.9"
