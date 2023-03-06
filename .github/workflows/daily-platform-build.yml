@@ -3,8 +3,8 @@ name: Daily Platform Build
 on: [pull_request, workflow_dispatch]
 
 jobs:
-  platform_build:
-    name: "Platform build"
+  artifacts_build:
+    name: "Build artifacts"
     runs-on: [self-hosted, Linux, X64, Diff]
     env:
       THREADS: 24
@@ -44,7 +44,7 @@ jobs:
 
           mkdir -p scripts/resources
 
-          find memgraph/build/output -type f -name "*.deb" -exec mv -f {} scripts/resources/memgraph-daily-build_amd64.deb \;
+          find memgraph/build/output -type f -name "*.deb" -exec mv -f {} scripts/resources/memgraph-daily-deb_amd64.deb \;
 
           rm -rf memgraph
 
@@ -58,7 +58,7 @@ jobs:
         run: |
           cd scripts
 
-          ./build_mage_img.sh main daily-mage daily-build
+          ./build_mage_img.sh main daily-mage daily-deb
 
       - name: "Upload MAGE image"
         uses: actions/upload-artifact@v3
@@ -68,7 +68,7 @@ jobs:
 
       - name: Build platform image
         run: |
-          ./build_platform_img.sh master daily-platform ${{ secrets.PAT }}
+          ./build_platform_img.sh master daily-platform daily-deb ${{ secrets.PAT }}
 
       - name: "Upload platform image"
         uses: actions/upload-artifact@v3
