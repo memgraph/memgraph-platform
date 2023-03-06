@@ -38,16 +38,14 @@ jobs:
           cd output
           cpack -G DEB --config "../CPackConfig.cmake"
 
-      # - name: Build deb image
-      #   run: |
-      #     cd scripts/
-      #     ./build_deb.sh master daily-deb
+          cd ../../..
 
-      # - name: Build MAGE image
-      #   run: |
-      #     ./build_mage_img.sh main daily-mage daily-deb
+          find memgraph/build/output -type f -name "*.deb" -exec mv -f {} memgraph-daily-build_amd64.deb \;
 
-      # - name: Build platform image
-      #   run: |
-      #     ./build_platform_img.sh master daily-build ${{ secrets.PAT }}
+          rm -rf memgraph
+
+      - name: Build MAGE image
+        run: |
+          ./build_mage_img.sh main daily-mage daily-build
+
 
