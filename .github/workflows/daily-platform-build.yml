@@ -18,6 +18,10 @@ jobs:
           # branches and tags. (default: 1)
           fetch-depth: 0
           token: ${{ secrets.PAT }}
+      
+      - name: Reset docker cache
+        run: |
+          docker buildx prune
 
       - name: Build community binaries
         run: |
