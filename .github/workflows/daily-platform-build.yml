@@ -48,6 +48,8 @@ jobs:
 
       - name: Build MAGE image
         run: |
+          echo "Printing directory"
+          echo $(ls)
           ./build_mage_img.sh main daily-mage daily-build
 
       - name: Build platform image
