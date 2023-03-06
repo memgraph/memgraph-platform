@@ -55,24 +55,24 @@ jobs:
           name: daily-deb
           path: scripts/resources/memgraph*.deb
 
-      - name: Build MAGE image
-        run: |
-          cd scripts
+      # - name: Build MAGE image
+      #   run: |
+      #     cd scripts
 
-          ./build_mage_img.sh main daily-mage daily-deb
+      #     ./build_mage_img.sh main daily-mage daily-deb
 
-      - name: "Upload MAGE image"
-        uses: actions/upload-artifact@v3
-        with:
-          name: daily-mage
-          path: resources/daily-mage.tar.gz
+      # - name: "Upload MAGE image"
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: daily-mage
+      #     path: resources/daily-mage.tar.gz
 
-      - name: Build platform image
-        run: |
-          ./build_platform_img.sh master daily-platform daily-deb ${{ secrets.PAT }}
+      # - name: Build platform image
+      #   run: |
+      #     ./build_platform_img.sh master daily-platform daily-deb ${{ secrets.PAT }}
 
-      - name: "Upload platform image"
-        uses: actions/upload-artifact@v3
-        with:
-          name: daily-platform
-          path: resources/daily-platform.tar.gz
+      # - name: "Upload platform image"
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: daily-platform
+      #     path: resources/daily-platform.tar.gz
