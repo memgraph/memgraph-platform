@@ -22,12 +22,11 @@ jobs:
 
       - name: Build deb image
         run: |
-          cd ./scripts/
+          cd scripts/
           sudo ./build_deb.sh master daily-deb
 
       - name: Build MAGE image
         run: |
-          cd ./scripts/
           sudo ./build_mage_img.sh main daily-mage daily-deb
 
       - name: Build platform image
