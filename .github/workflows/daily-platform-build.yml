@@ -35,7 +35,9 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=release -DMG_ENTERPRISE=OFF ..
           make -j$THREADS
 
+          mkdir -p output
           cd output
+
           cpack -G DEB --config "../CPackConfig.cmake"
 
           cd ../../..
@@ -52,3 +54,4 @@ jobs:
         run: |
           ./build_platform_img.sh master daily-build ${{ secrets.PAT }}
 
+        
