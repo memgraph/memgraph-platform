@@ -48,7 +48,7 @@ jobs:
 
           rm -rf memgraph
 
-      - name: "Upload package"
+      - name: "Upload DEB"
         uses: actions/upload-artifact@v3
         with:
           name: daily-deb
@@ -60,8 +60,19 @@ jobs:
 
           ./build_mage_img.sh main daily-mage daily-build
 
+      - name: "Upload MAGE image"
+        uses: actions/upload-artifact@v3
+        with:
+          name: daily-mage
+          path: resources/daily-mage.tar.gz
+
       - name: Build platform image
         run: |
-          ./build_platform_img.sh master daily-build ${{ secrets.PAT }}
+          ./build_platform_img.sh master daily-platform ${{ secrets.PAT }}
 
+      - name: "Upload platform image"
+        uses: actions/upload-artifact@v3
+        with:
+          name: daily-platform
+          path: resources/daily-platform.tar.gz
         
