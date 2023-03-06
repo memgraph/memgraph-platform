@@ -8,6 +8,7 @@ jobs:
     runs-on: [self-hosted, Linux, X64, Diff]
     env:
       THREADS: 24
+      PY_VERSION: "3.9"
 
     steps:
       - name: Set up repository
@@ -17,6 +18,11 @@ jobs:
           # branches and tags. (default: 1)
           fetch-depth: 0
           token: ${{ secrets.PAT }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ env.PY_VERSION }}
 
       - name: Build community binaries
         run: |
