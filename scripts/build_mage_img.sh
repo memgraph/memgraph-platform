@@ -13,7 +13,7 @@ cp "${CURR_DIR}/resources/memgraph-${deb_name}_amd64.deb" "${MAGE_DIR}/memgraph-
 
 cd ${MAGE_DIR}
 
-docker buildx build --target prod --platform=linux/amd64 -t ${image_name} --build-arg TARGETARCH=${deb_name}_amd64 -f ${MAGE_DIR}/Dockerfile.release .
+docker buildx build --no-cache --target prod --platform=linux/amd64 -t ${image_name} --build-arg TARGETARCH=${deb_name}_amd64 -f ${MAGE_DIR}/Dockerfile.release .
 
 cd ${CURR_DIR}
 

@@ -18,10 +18,6 @@ jobs:
           # branches and tags. (default: 1)
           fetch-depth: 0
           token: ${{ secrets.PAT }}
-      
-      - name: Reset docker cache
-        run: |
-          docker buildx prune && echo "y"
 
       - name: Build community binaries
         run: |
@@ -38,7 +34,7 @@ jobs:
           # Build community binaries.
           cd build
           cmake -DCMAKE_BUILD_TYPE=release -DMG_ENTERPRISE=OFF ..
-          make -j$THREADS && make -j$THREADS mgconsole
+          make -j$THREADS memgraph && make -j$THREADS mgconsole
 
           mkdir -p output
           cd output
