@@ -75,4 +75,3 @@ jobs:
         with:
           name: daily-platform
           path: resources/daily-platform.tar.gz
-        
