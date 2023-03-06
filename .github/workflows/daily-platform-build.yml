@@ -6,10 +6,6 @@ jobs:
   platform_build:
     name: "Platform build"
     runs-on: [self-hosted, Linux, X64, Diff]
-    env:
-      THREADS: 24
-      MEMGRAPH_ENTERPRISE_LICENSE: ${{ secrets.MEMGRAPH_ENTERPRISE_LICENSE }}
-      MEMGRAPH_ORGANIZATION_NAME: ${{ secrets.MEMGRAPH_ORGANIZATION_NAME }}
 
     steps:
       - name: Set up repository
@@ -23,13 +19,13 @@ jobs:
       - name: Build deb image
         run: |
           cd scripts/
-          sudo ./build_deb.sh master daily-deb
+          ./build_deb.sh master daily-deb
 
       - name: Build MAGE image
         run: |
-          sudo ./build_mage_img.sh main daily-mage daily-deb
+          ./build_mage_img.sh main daily-mage daily-deb
 
       - name: Build platform image
         run: |
-          sudo ./build_platform_img.sh master daily-build ${{ secrets.PAT }}
+          ./build_platform_img.sh master daily-build ${{ secrets.PAT }}
 
