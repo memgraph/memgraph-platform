@@ -19,11 +19,6 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.PAT }}
 
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ env.PY_VERSION }}
-
       - name: Build community binaries
         run: |
           git clone -b master https://github.com/memgraph/memgraph.git
