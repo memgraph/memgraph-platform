@@ -40,16 +40,24 @@ jobs:
 
           cpack -G DEB --config "../CPackConfig.cmake"
 
-          cd ../../..
+          cd ../../../
 
-          find memgraph/build/output -type f -name "*.deb" -exec mv -f {} memgraph-daily-build_amd64.deb \;
+          mkdir -p scripts/resources
+
+          find memgraph/build/output -type f -name "*.deb" -exec mv -f {} scripts/resources/memgraph-daily-build_amd64.deb \;
 
           rm -rf memgraph
 
+      - name: "Upload package"
+        uses: actions/upload-artifact@v3
+        with:
+          name: daily-deb
+          path: scripts/resources/memgraph*.deb
+
       - name: Build MAGE image
         run: |
-          echo "Printing directory"
-          echo $(ls)
+          cd scripts
+
           ./build_mage_img.sh main daily-mage daily-build
 
       - name: Build platform image
