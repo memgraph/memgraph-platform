@@ -56,7 +56,7 @@ RUN git clone --recurse-submodules -b 0.9.x https://github.com/dmlc/dgl.git  \
 ###################################################################################################################################################
 
 # Lab: Build backend
-FROM node:16-alpine as lab-base
+FROM node:18.15-alpine as lab-base
 
 WORKDIR /app
 # Python make and g++ are needed for arm node-gyp package
@@ -100,14 +100,12 @@ COPY --from=lab-base /app/.env /lab/.env
 
 # This is needed for lab
 RUN apt-get update \
-    && curl -fsSL https://deb.nodesource.com/setup_16.x | bash - \
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # This is needed for memgraph built in algos
 RUN pip3 install --default-timeout=1000 networkx==2.4 numpy==1.21.4 scipy==1.7.3
-
-RUN sed -i "s/HOTJAR_IS_ENABLED=false/HOTJAR_IS_ENABLED=true/" /lab/.env
 
 #copy modules
 COPY --from=mage-dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules/
