@@ -194,11 +194,6 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Download memgraph binaries
-        run: |
-          curl -L https://download.memgraph.com/memgraph/v${{ github.event.inputs.memgraph_version }}/debian-11-aarch64/memgraph_${{ github.event.inputs.memgraph_version }}-1_arm64.deb > memgraph-arm64.deb
-          curl -L https://download.memgraph.com/memgraph/v${{ github.event.inputs.memgraph_version }}/debian-11/memgraph_${{ github.event.inputs.memgraph_version }}-1_amd64.deb > memgraph-amd64.deb
-
       - name: Get Memgraph Lab release version
         run: |
           cd lab
@@ -228,9 +223,6 @@ jobs:
 
       - name: Build single image
         run: |
-          docker pull $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.PLATFORM_VERSION }}-amd
-          docker pull $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.PLATFORM_VERSION }}-arm
-
           docker buildx imagetools create \
           --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.PLATFORM_VERSION }} \
           --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:latest \
