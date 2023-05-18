@@ -52,7 +52,8 @@ jobs:
           git fetch --all --tags
           MEMGRAPH_MAGE_VERSION=$(git rev-parse --verify HEAD | git tag --contains)
           echo $MEMGRAPH_MAGE_VERSION
-          echo "MAGE_VERSION=${MEMGRAPH_MAGE_VERSION:1}" >> $GITHUB_ENV
+          MEMGRAPH_MAGE_VERSION=${MEMGRAPH_MAGE_VERSION#v}
+          echo "MAGE_VERSION=${MEMGRAPH_MAGE_VERSION%%-*}" >> $GITHUB_ENV
 
       - name: Set Memgraph Platform version
         run: |
@@ -127,7 +128,8 @@ jobs:
           git fetch --all --tags
           MEMGRAPH_MAGE_VERSION=$(git rev-parse --verify HEAD | git tag --contains)
           echo $MEMGRAPH_MAGE_VERSION
-          echo "MAGE_VERSION=${MEMGRAPH_MAGE_VERSION:1}" >> $GITHUB_ENV
+          MEMGRAPH_MAGE_VERSION=${MEMGRAPH_MAGE_VERSION#v}
+          echo "MAGE_VERSION=${MEMGRAPH_MAGE_VERSION%%-*}" >> $GITHUB_ENV
 
       - name: Set Memgraph Platform version
         run: |
@@ -208,7 +210,8 @@ jobs:
           git fetch --all --tags
           MEMGRAPH_MAGE_VERSION=$(git rev-parse --verify HEAD | git tag --contains)
           echo $MEMGRAPH_MAGE_VERSION
-          echo "MAGE_VERSION=${MEMGRAPH_MAGE_VERSION:1}" >> $GITHUB_ENV
+          MEMGRAPH_MAGE_VERSION=${MEMGRAPH_MAGE_VERSION#v}
+          echo "MAGE_VERSION=${MEMGRAPH_MAGE_VERSION%%-*}" >> $GITHUB_ENV
 
       - name: Set Memgraph Platform version
         run: |
