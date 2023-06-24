@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# TODO: Rename to build_platform.sh
 # TODO: Here only the Memgraph package is required as an impor
 # TODO: Add scripts under Docker ignore
 
@@ -11,7 +10,7 @@ branch=$1
 image_name=$2
 # memgraph-${target_arch}_amd64.deb
 target_arch=$3
-# TODO: Npm package toker -> for lab
+# TODO: Npm package token -> for lab
 token=$4
 # TODO: An option build wihout mage
 memgraph_and_lab=${5-false}
