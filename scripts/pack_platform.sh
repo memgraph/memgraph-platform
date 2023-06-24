@@ -1,37 +1,24 @@
 #!/bin/bash
+set -euo pipefail
+DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
-# TODO: Here only the Memgraph package is required as an impor
-# TODO: Add scripts under Docker ignore
+MGPLAT_NPM_TOKEN="${MGPLAT_NPM_TOKEN:-npm_token}"
 
-CURR_DIR="$PWD"
-PLATFORM_DIR="${CURR_DIR}/memgraph-platform"
-# TODO: branch is not used at all
-branch=$1
-image_name=$2
-# memgraph-${target_arch}_amd64.deb
-target_arch=$3
-# TODO: Npm package token -> for lab
-token=$4
-# TODO: An option build wihout mage
-memgraph_and_lab=${5-false}
+# TODO: Deduce memgraph package from resources/output or inject it.
+PLATFORM_DIR="$DIR/../"
+image_name="memgraph_platform_2023-06-24"
+# TODO(gitbuda): take latest from the resources file, memgraph-${target_arch}_amd64.deb (DERIVE)
+target_arch="2.8.0+22~3cd674701-1"
+# npmjs.com access token -> required for the lab deps.
+# TODO: An option build wihout lab.
 
-# TODO: but we already have this here (the whole repo)?
-git clone --recurse-submodules -b $1 https://github.com/memgraph/memgraph-platform.git
-cp "${CURR_DIR}/resources/memgraph-${target_arch}_amd64.deb" "${PLATFORM_DIR}/memgraph-${target_arch}_amd64.deb"
-cd ${PLATFORM_DIR}
-dockerfile=${PLATFORM_DIR}/Dockerfile
-if [ "${memgraph_and_lab}" == true ];
-then
-    dockerfile = ${PLATFORM_DIR}/memgraph_and_lab.Dockerfile
-fi
-
-# NOTE: Command from the mage part....
-# docker buildx build --target prod --platform=linux/amd64 -t ${image_name} --build-arg TARGETARCH=${deb_name}_amd64 -f ${MAGE_DIR}/Dockerfile.release .
+cp "$DIR/resources/output/memgraph_${target_arch}_amd64.deb" \
+   "$PLATFORM_DIR/memgraph-${target_arch}_amd64.deb"
+cd "$PLATFORM_DIR"
 docker buildx build --platform=linux/amd64 -t ${image_name} \
-  --build-arg TARGETARCH=${target_arch}_amd64 --build-arg NPM_PACKAGE_TOKEN=${token} -f ${dockerfile} .
+  --build-arg TARGETARCH=${target_arch}_amd64 \
+  --build-arg NPM_PACKAGE_TOKEN=${MGPLAT_NPM_TOKEN} \
+  -f Dockerfile .
+docker save ${image_name} | gzip -f > "$DIR/resources/output/${image_name}.tar.gz"
 
-cd ${CURR_DIR}
-docker save ${image_name} | gzip -f > "${CURR_DIR}/resources/${image_name}.tar.gz"
-docker rmi ${image_name}
-rm -rf ${image_name}
-rm -rf ${PLATFORM_DIR}
+# TODO(gitbuda): option for cleanup
