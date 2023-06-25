@@ -5,11 +5,12 @@ PLATFORM_DIR="$DIR/../"
 
 MGPLAT_NPM_TOKEN="${MGPLAT_NPM_TOKEN:-npm_token}"
 
-# TODO: Deduce memgraph package from dist or inject it.
+# TODO(gitbuda): Deduce memgraph package from dist or inject it.
+# TODO(gitbuda): The default image name should simply be memgraph_platform_current_time
 image_name="memgraph_platform_2023-06-24"
 # TODO(gitbuda): take latest from the resources file, memgraph-${target_arch}_amd64.deb (DERIVE)
 target_arch="2.8.0+22~3cd674701-1"
-# TODO: An option build wihout lab.
+# TODO(gitbuda): An option build wihout mage.
 
 cp "$DIR/dist/package/memgraph_${target_arch}_amd64.deb" \
    "$PLATFORM_DIR/memgraph-${target_arch}_amd64.deb"
