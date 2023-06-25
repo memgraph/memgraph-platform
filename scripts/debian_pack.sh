@@ -42,3 +42,5 @@ docker_exec "git config --global --add safe.directory $MGPLAT_CNT_MG_DIR"
 mg_root="MGPLAT_MEMGRAPH_ROOT=$MGPLAT_CNT_MG_DIR"
 mg_build_type="MGPLAT_MEMGRAPH_BUILD_TYPE=RelWithDebInfo"
 docker_exec "$mg_root $mg_build_type /build_memgraph.sh build"
+
+# TODO(gitbuda): option for cleanup (docker rmi builder + package) + add a prompt for each command because the build process take long time.

@@ -22,4 +22,4 @@ docker buildx build --platform=linux/amd64 -t ${image_name} \
 mkdir -p "$DIR/dist/docker"
 docker save ${image_name} | gzip -f > "$DIR/dist/docker/${image_name}.tar.gz"
 
-# TODO(gitbuda): option for cleanup (docker rmi + tar.gz remove)
+# TODO(gitbuda): option for cleanup (docker rmi + tar.gz remove) + add a prompt for each command because the build process take long time.
