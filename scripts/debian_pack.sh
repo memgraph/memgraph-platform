@@ -8,7 +8,7 @@ MGPLAT_CNT_MG_DIR="/platform/mage/cpp/memgraph"
 cd "$DIR"
 # shellcheck disable=SC1091
 source build_memgraph.sh
-mkdir -p resources
+mkdir -p dist
 
 docker_run () {
   cnt_name="$1"
@@ -20,7 +20,7 @@ docker_run () {
       fi
       docker run -d \
         -v "$DIR/..:/platform" \
-        -v "$DIR/resources/output:$MGPLAT_CNT_MG_DIR/build/output" \
+        -v "$DIR/dist/package:$MGPLAT_CNT_MG_DIR/build/output" \
         --network host --name "$cnt_name" "$cnt_image"
   fi
   echo "The $cnt_image container is active under $cnt_name name!"

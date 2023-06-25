@@ -1,21 +1,19 @@
 #!/bin/bash
+set -euo pipefail
+DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+PLATFORM_DIR="$DIR/../"
+MAGE_DIR="$PLATFORM_DIR/mage"
 
-# TODO: Rename to build_mage.sh
+# TODO: Deduce memgraph package from dist or inject it.
+image_name="memgraph_mage_2023-06-24"
+# TODO(gitbuda): take latest from the resources file, memgraph-${target_arch}_amd64.deb (DERIVE)
+target_arch="2.8.0+22~3cd674701-1"
 
-CURR_DIR="$PWD"
-MAGE_DIR="$CURR_DIR/mage"
-branch=$1
-image_name=$2
-deb_name=$3
-
-git clone --recurse-submodules -b $1 https://github.com/memgraph/mage.git
-cp "${CURR_DIR}/resources/memgraph-${deb_name}_amd64.deb" "${MAGE_DIR}/memgraph-${deb_name}_amd64.deb"
-
+cp "$DIR/dist/package/memgraph_${target_arch}_amd64.deb" \
+   "$MAGE_DIR/memgraph-${target_arch}_amd64.deb"
 cd ${MAGE_DIR}
-docker buildx build --target prod --platform=linux/amd64 -t ${image_name} --build-arg TARGETARCH=${deb_name}_amd64 -f ${MAGE_DIR}/Dockerfile.release .
+docker buildx build --target prod --platform=linux/amd64 -t "$image_name" --build-arg TARGETARCH="${target_arch}_amd64" -f "$MAGE_DIR/Dockerfile.release" .
+mkdir -p "$DIR/dist/docker"
+docker save ${image_name} | gzip -f > "$DIR/dist/docker/${image_name}.tar.gz"
 
-cd ${CURR_DIR}
-docker save ${image_name} | gzip -f > "${CURR_DIR}/resources/${image_name}.tar.gz"
-docker rmi ${image_name}
-rm -rf ${image_name}
-rm -rf ${MAGE_DIR}
+# TODO(gitbuda): option for cleanup (docker rmi + tar.gz remove)

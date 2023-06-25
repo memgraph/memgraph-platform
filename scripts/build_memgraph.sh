@@ -44,6 +44,7 @@ build() {
 }
 
 clean() {
+  # TODO(gitbuda): Package will be deleted as well -> do we want that?
   cd "$MGPLAT_MEMGRAPH_ROOT"
   rm -rf ./build
   # TODO(gitbuda): Doesn't work if package_deb is called because of root (SUDO)
