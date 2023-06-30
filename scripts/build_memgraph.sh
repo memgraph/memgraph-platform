@@ -5,7 +5,7 @@ DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 MGPLAT_TOOLCHAIN_ROOT="${MGPLAT_TOOLCHAIN_ROOT:-/opt/toolchain-v4}"
 MGPLAT_MEMGRAPH_ROOT="${MGPLAT_MEMGRAPH_ROOT:-$DIR/../mage/cpp/memgraph}"
 # TODO(gitbuda): build_memgraph put master
-MGPLAT_MEMGRAPH_TAG="${MGPLAT_MEMGRAPH_TAG:-skip-init-git-hooks}"
+MGPLAT_MEMGRAPH_TAG="${MGPLAT_MEMGRAPH_TAG:-master}"
 MGPLAT_MEMGRAPH_BUILD_TYPE="${MGPLAT_MEMGRAPH_BUILD_TYPE:-Release}"
 MGPLAT_CORES="${MGPLAT_CORES:-$(nproc)}"
 declare -A MGPLAT_CPACK
