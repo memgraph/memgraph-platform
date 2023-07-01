@@ -2,13 +2,16 @@
 set -eo pipefail
 DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
+# NOTE: The builder container image defines for which operating system Memgraph will be built.
+# TODO(gitbuda): Take from env variable
+MGPLAT_CNT_IMAGE="memgraph/memgraph-builder:v4_debian-10"
 MGPLAT_CNT_NAME="mgbuild_builder"
 MGPLAT_CNT_MG_DIR="/platform/mage/cpp/memgraph"
 
 cd "$DIR"
 # shellcheck disable=SC1091
 source build_memgraph.sh
-mkdir -p dist
+mkdir -p dist/binary
 
 docker_run () {
   cnt_name="$1"
@@ -36,7 +39,7 @@ docker_exec() {
   docker exec -it "$MGPLAT_CNT_NAME" bash -c "$cnt_cmd"
 }
 
-docker_run "$MGPLAT_CNT_NAME" "memgraph/memgraph-builder"
+docker_run "$MGPLAT_CNT_NAME" "$MGPLAT_CNT_IMAGE"
 docker cp "$DIR/build_memgraph.sh" "$MGPLAT_CNT_NAME:/"
 docker_exec "git config --global --add safe.directory $MGPLAT_CNT_MG_DIR"
 mg_root="MGPLAT_MEMGRAPH_ROOT=$MGPLAT_CNT_MG_DIR"
@@ -44,4 +47,5 @@ mg_build_type="MGPLAT_MEMGRAPH_BUILD_TYPE=RelWithDebInfo"
 docker_exec "$mg_root $mg_build_type /build_memgraph.sh build"
 
 # TODO(gitbuda): copy/put somehow memgraph binary to the dist repo
+# docker cp "$MGPLAT_CNT_NAME:$MGPLAT_CNT_MG_DIR/build/memgraph-2.8.0+31~9d056e764_RelWithDebInfo" "$DIR/dist/binary/memgraph_master
 # TODO(gitbuda): option for cleanup (docker rmi builder + package) + add a prompt for each command because the build process take long time.

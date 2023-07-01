@@ -34,6 +34,7 @@ build() {
   cd "$MGPLAT_MEMGRAPH_ROOT"
   git checkout "$MGPLAT_MEMGRAPH_TAG"
   # TODO(gitbuda): build_memgraph run install instead of check (SUDO)
+  ./environment/os/"$(operating_system)".sh install TOOLCHAIN_RUN_DEPS
   ./environment/os/"$(operating_system)".sh install MEMGRAPH_BUILD_DEPS
   ./init
   mkdir -p build && cd build
