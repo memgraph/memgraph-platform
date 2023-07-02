@@ -1,5 +1,7 @@
 #!/bin/bash
-set -eox pipefail
+# TODO(gitbuda): /bin/bash doesn't work on Mac -> figure out
+# TODO(gitbuda): Put set -e back
+set -ox pipefail
 DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 MGPLAT_TOOLCHAIN_ROOT="${MGPLAT_TOOLCHAIN_ROOT:-/opt/toolchain-v4}"
@@ -7,14 +9,22 @@ MGPLAT_MEMGRAPH_ROOT="${MGPLAT_MEMGRAPH_ROOT:-$DIR/../mage/cpp/memgraph}"
 # TODO(gitbuda): build_memgraph put master
 MGPLAT_MEMGRAPH_TAG="${MGPLAT_MEMGRAPH_TAG:-master}"
 MGPLAT_MEMGRAPH_BUILD_TYPE="${MGPLAT_MEMGRAPH_BUILD_TYPE:-RelWithDebInfo}"
-MGPLAT_CORES="${MGPLAT_CORES:-$(nproc)}"
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+  MGPLAT_CORES="${MGPLAT_CORES:-$(nproc)}"
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+  MGPLAT_CORES="${MGPLAT_CORES:-$(sysctl -n hw.physicalcpu)}"
+else
+  MGPLAT_CORES="${MGPLAT_CORES:-8}"
+fi
 declare -A MGPLAT_CPACK
 MGPLAT_CPACK[ubuntu]="cpack -G DEB --config ../CPackConfig.cmake"
 MGPLAT_CPACK[debian]="cpack -G DEB --config ../CPackConfig.cmake"
 # Required to get the underlying opearting system
 # shellcheck disable=SC1091
-source "$MGPLAT_MEMGRAPH_ROOT/environment/util.sh"
-OPERATING_SYSTEM_FAMILY="$(operating_system | cut -d "-" -f 1)"
+# TODO(gitbuda): operating_system doesn't work on Mac -> extend and improve
+# source "$MGPLAT_MEMGRAPH_ROOT/environment/util.sh"
+# OPERATING_SYSTEM_FAMILY="$(operating_system | cut -d "-" -f 1)"
+OPERATING_SYSTEM_FAMILY="debian"
 
 print_help() {
   echo -e "ENV VARS:"

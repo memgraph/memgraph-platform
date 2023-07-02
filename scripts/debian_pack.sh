@@ -16,6 +16,7 @@ MGPLAT_MG_BIN_NAME="memgraph-2.8.0+29~84721f7e0_RelWithDebInfo"
 
 cd "$DIR"
 # shellcheck disable=SC1091
+# TODO(gitbuda): This is a problem because the initial loading -> move at the top of the script.
 source build_memgraph.sh
 mkdir -p dist/binary
 
