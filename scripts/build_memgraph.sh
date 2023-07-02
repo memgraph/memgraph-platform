@@ -22,7 +22,7 @@ MGPLAT_CPACK[debian]="cpack -G DEB --config ../CPackConfig.cmake"
 # Required to get the underlying opearting system
 # shellcheck disable=SC1091
 # TODO(gitbuda): operating_system doesn't work on Mac -> extend and improve
-# source "$MGPLAT_MEMGRAPH_ROOT/environment/util.sh"
+source "$MGPLAT_MEMGRAPH_ROOT/environment/util.sh"
 # OPERATING_SYSTEM_FAMILY="$(operating_system | cut -d "-" -f 1)"
 OPERATING_SYSTEM_FAMILY="debian"
 
@@ -44,6 +44,7 @@ build() {
   cd "$MGPLAT_MEMGRAPH_ROOT"
   git checkout "$MGPLAT_MEMGRAPH_TAG"
   # TODO(gitbuda): build_memgraph run install instead of check (SUDO)
+  # TODO(gitbuda): operating_system system here is empty if source is not called
   ./environment/os/"$(operating_system)".sh install TOOLCHAIN_RUN_DEPS
   ./environment/os/"$(operating_system)".sh install MEMGRAPH_BUILD_DEPS
   ./init
