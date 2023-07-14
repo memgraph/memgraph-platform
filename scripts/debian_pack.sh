@@ -14,12 +14,6 @@ MGPLAT_MG_DIST_BIN_NAME="${MGPLAT_MG_DIST_BIN_NAME:-memgraph}"
 # TODO(gitbuda): Comput the latest binary name
 MGPLAT_MG_BIN_NAME="memgraph-2.8.0+29~84721f7e0_RelWithDebInfo"
 
-cd "$DIR"
-# shellcheck disable=SC1091
-# TODO(gitbuda): This is a problem because the initial loading -> move at the top of the script.
-source build_memgraph.sh
-mkdir -p dist/binary
-
 docker_run () {
   cnt_name="$1"
   cnt_image="$2"
@@ -46,16 +40,41 @@ docker_exec() {
   docker exec -it "$MGPLAT_CNT_NAME" bash -c "$cnt_cmd"
 }
 
-docker_run "$MGPLAT_CNT_NAME" "$MGPLAT_CNT_IMAGE"
-docker cp "$DIR/build_memgraph.sh" "$MGPLAT_CNT_NAME:/"
-docker_exec "git config --global --add safe.directory $MGPLAT_CNT_MG_DIR"
-mg_root="MGPLAT_MEMGRAPH_ROOT=$MGPLAT_CNT_MG_DIR"
-mg_tag="MGPLAT_MEMGRAPH_TAG=$MGPLAT_MEMGRAPH_TAG"
-mg_build_type="MGPLAT_MEMGRAPH_BUILD_TYPE=$MGPLAT_MEMGRAPH_BUILD_TYPE"
-docker_exec "$mg_root $mg_build_type $mg_tag /build_memgraph.sh build"
+build_pack() {
+  cd "$DIR"
+  # shellcheck disable=SC1091
+  # TODO(gitbuda): This is a problem because the initial loading -> move at the top of the script.
+  source build_memgraph.sh
+  mkdir -p dist/binary
+  docker_run "$MGPLAT_CNT_NAME" "$MGPLAT_CNT_IMAGE"
+  docker cp "$DIR/build_memgraph.sh" "$MGPLAT_CNT_NAME:/"
+  docker_exec "git config --global --add safe.directory $MGPLAT_CNT_MG_DIR"
+  mg_root="MGPLAT_MEMGRAPH_ROOT=$MGPLAT_CNT_MG_DIR"
+  mg_tag="MGPLAT_MEMGRAPH_TAG=$MGPLAT_MEMGRAPH_TAG"
+  mg_build_type="MGPLAT_MEMGRAPH_BUILD_TYPE=$MGPLAT_MEMGRAPH_BUILD_TYPE"
+  docker_exec "$mg_root $mg_build_type $mg_tag /build_memgraph.sh build"
+}
 
-# TODO(gitbuda): copy/put somehow memgraph binary to the dist repo
-docker cp "$MGPLAT_CNT_NAME:$MGPLAT_CNT_MG_DIR/build/$MGPLAT_MG_BIN_NAME" "$DIR/dist/binary/$MGPLAT_MG_DIST_BIN_NAME"
+print_help() {
+  echo -e "$0 [copy]"
+  exit 1
+}
+if [ "$#" == 0 ]; then
+  build_pack
+else
+  case "$1" in
+    copy)
+      cnt_binary_paths="$(docker exec "$MGPLAT_CNT_NAME" bash -c "ls $MGPLAT_CNT_MG_DIR/build/memgraph-*")"
+      for cnt_binary_path in $cnt_binary_paths; do
+        src_cnt_binary_path="$MGPLAT_CNT_NAME:$cnt_binary_path"
+        docker cp "$src_cnt_binary_path" "$DIR/dist/binary/"
+      done
+    ;;
+    *)
+      print_help
+    ;;
+  esac
+fi
 
 # # TODO(gitbuda): option for cleanup (docker rmi builder + package) + add a prompt for each command because the build process take long time.
 # cd "$MGPLAT_MEMGRAPH_ROOT/build"
