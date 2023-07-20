@@ -47,6 +47,7 @@ build() {
   # TODO(gitbuda): operating_system system here is empty if source is not called
   ./environment/os/"$(operating_system)".sh install TOOLCHAIN_RUN_DEPS
   ./environment/os/"$(operating_system)".sh install MEMGRAPH_BUILD_DEPS
+  # TODO(gitbuda): if install fails -> everything cascades -> make sure each of these commands stops the build
   ./init
   mkdir -p build && cd build
   cmake -DCMAKE_BUILD_TYPE="$MGPLAT_MEMGRAPH_BUILD_TYPE" .. && \
