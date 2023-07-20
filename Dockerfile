@@ -23,6 +23,7 @@ RUN apt-get update && apt-get install -y \
     python3-dev     `mage-memgraph` \
     clang           `mage-memgraph` \
     git             `mage-memgraph` \
+    unixodbc-dev        `mage-memgraph` \
     supervisor      `memgraph`\
     netcat         `memgraph-platform` \
     --no-install-recommends \
