@@ -79,7 +79,7 @@ COPY lab/tsconfig.json .
 COPY lab/tsconfig.build.json .
 COPY lab/.env .
 
-RUN sed -i "s/NODE_ENV=local/NODE_ENV=platform/" /lab/.env
+RUN sed -i "s/NODE_ENV=local/NODE_ENV=platform/" ./.env
 
 COPY lab/backend/ ./backend/
 COPY lab/frontend/ ./frontend/
