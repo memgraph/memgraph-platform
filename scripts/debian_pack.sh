@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -eo pipefail
 DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 # NOTE: The builder container image defines for which operating system Memgraph will be built.
 # TODO(gitbuda): Take from env variable
-MGPLAT_CNT_IMAGE="memgraph/memgraph-builder:v4_debian-10"
+MGPLAT_CNT_IMAGE="${MGPLAT_CNT_IMAGE:-memgraph/memgraph-builder:v4_debian-10}"
 MGPLAT_CNT_NAME="mgbuild_builder"
 MGPLAT_MEMGRAPH_ROOT="${MGPLAT_MEMGRAPH_ROOT:-$DIR/../mage/cpp/memgraph}"
 MGPLAT_CNT_MG_DIR="/platform/mage/cpp/memgraph"
@@ -13,6 +13,11 @@ MGPLAT_MEMGRAPH_BUILD_TYPE="${MGPLAT_MEMGRAPH_BUILD_TYPE:-RelWithDebInfo}"
 MGPLAT_MG_DIST_BIN_NAME="${MGPLAT_MG_DIST_BIN_NAME:-memgraph}"
 # TODO(gitbuda): Comput the latest binary name
 MGPLAT_MG_BIN_NAME="memgraph-2.8.0+29~84721f7e0_RelWithDebInfo"
+# TODO(gitbuda): Update print_help
+print_help() {
+  echo -e "$0 [copy]"
+  exit 1
+}
 
 docker_run () {
   cnt_name="$1"
@@ -55,10 +60,6 @@ build_pack() {
   docker_exec "$mg_root $mg_build_type $mg_tag /build_memgraph.sh build"
 }
 
-print_help() {
-  echo -e "$0 [copy]"
-  exit 1
-}
 if [ "$#" == 0 ]; then
   build_pack
 else

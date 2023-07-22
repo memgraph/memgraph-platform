@@ -1,12 +1,9 @@
-#!/bin/bash
-# TODO(gitbuda): /bin/bash doesn't work on Mac -> figure out
-# TODO(gitbuda): Put set -e back
-set -ox pipefail
+#!/usr/bin/env bash
+set -eox pipefail
 DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 MGPLAT_TOOLCHAIN_ROOT="${MGPLAT_TOOLCHAIN_ROOT:-/opt/toolchain-v4}"
 MGPLAT_MEMGRAPH_ROOT="${MGPLAT_MEMGRAPH_ROOT:-$DIR/../mage/cpp/memgraph}"
-# TODO(gitbuda): build_memgraph put master
 MGPLAT_MEMGRAPH_TAG="${MGPLAT_MEMGRAPH_TAG:-master}"
 MGPLAT_MEMGRAPH_BUILD_TYPE="${MGPLAT_MEMGRAPH_BUILD_TYPE:-RelWithDebInfo}"
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
@@ -16,16 +13,7 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
 else
   MGPLAT_CORES="${MGPLAT_CORES:-8}"
 fi
-declare -A MGPLAT_CPACK
-MGPLAT_CPACK[ubuntu]="cpack -G DEB --config ../CPackConfig.cmake"
-MGPLAT_CPACK[debian]="cpack -G DEB --config ../CPackConfig.cmake"
-# Required to get the underlying opearting system
-# shellcheck disable=SC1091
-# TODO(gitbuda): operating_system doesn't work on Mac -> extend and improve
-source "$MGPLAT_MEMGRAPH_ROOT/environment/util.sh"
-# OPERATING_SYSTEM_FAMILY="$(operating_system | cut -d "-" -f 1)"
-OPERATING_SYSTEM_FAMILY="debian"
-
+# TODO(gitbuda): Update print_help
 print_help() {
   echo -e "ENV VARS:"
   echo -e "\tMGPLAT_TOOLCHAIN_ROOT\t   -> root directory of the toolchain"
@@ -38,15 +26,31 @@ print_help() {
   exit 1
 }
 
-build() {
-  # shellcheck disable=SC1091
-  source "$MGPLAT_TOOLCHAIN_ROOT/activate"
+pull_memgraph_and_os() {
   cd "$MGPLAT_MEMGRAPH_ROOT"
   git checkout "$MGPLAT_MEMGRAPH_TAG"
+  git pull origin "$MGPLAT_MEMGRAPH_TAG"
+  # Required to get the underlying opearting system
+  source "$MGPLAT_MEMGRAPH_ROOT/environment/util.sh"
+  OPERATING_SYSTEM_FAMILY="$(operating_system | cut -d "-" -f 1)"
+}
+
+declare -A MGPLAT_CPACK
+MGPLAT_CPACK[ubuntu]="cpack -G DEB --config ../CPackConfig.cmake"
+MGPLAT_CPACK[debian]="cpack -G DEB --config ../CPackConfig.cmake"
+
+build() {
+  # shellcheck disable=SC1091
+  pull_memgraph_and_os
+  source "$MGPLAT_TOOLCHAIN_ROOT/activate"
+  if [ "$(architecture)" = "arm64" ] || [ "$(architecture)" = "aarch64" ]; then
+    OS_SCRIPT="$MGPLAT_MEMGRAPH_ROOT/environment/os/$(operating_system)-arm.sh"
+  else
+    OS_SCRIPT="$MGPLAT_MEMGRAPH_ROOT/environment/os/$(operating_system).sh"
+  fi
+  $OS_SCRIPT install TOOLCHAIN_RUN_DEPS
+  $OS_SCRIPT install MEMGRAPH_BUILD_DEPS
   # TODO(gitbuda): build_memgraph run install instead of check (SUDO)
-  # TODO(gitbuda): operating_system system here is empty if source is not called
-  ./environment/os/"$(operating_system)".sh install TOOLCHAIN_RUN_DEPS
-  ./environment/os/"$(operating_system)".sh install MEMGRAPH_BUILD_DEPS
   # TODO(gitbuda): if install fails -> everything cascades -> make sure each of these commands stops the build
   ./init
   mkdir -p build && cd build
