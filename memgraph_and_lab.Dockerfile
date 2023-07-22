@@ -8,6 +8,7 @@ ARG NPM_PACKAGE_TOKEN
 
 COPY lab/frontend/.npmrc ./frontend/
 COPY lab/frontend/package*.json ./frontend/
+COPY lab/frontend/memgraph-orb-*.tgz ./frontend/
 RUN echo '//npm.pkg.github.com/:_authToken=${NPM_PACKAGE_TOKEN}' | tee -a ./frontend/.npmrc
 
 COPY lab/package*.json ./

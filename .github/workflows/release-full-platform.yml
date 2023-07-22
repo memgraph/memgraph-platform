@@ -15,10 +15,14 @@ on:
         type: boolean
         required: false
         default: false
+      docker_repository_name:
+        description: "Dockerhub repository to upload to. (Mainly for testing)"
+        required: false
+        default: memgraph-platform
 
 env:
   DOCKER_ORGANIZATION_NAME: memgraph
-  DOCKER_REPOSITORY_NAME: memgraph-platform
+  DOCKER_REPOSITORY_NAME: ${{ github.event.inputs.docker_repository_name }}
 
 # Reason for separating ARM and AMD is speed, buildx is extremely slow when
 # building for ARM on AMD, and it is better to use native ARM machine to build
@@ -48,7 +52,8 @@ jobs:
           git fetch --all --tags
           MEMGRAPH_MAGE_VERSION=$(git rev-parse --verify HEAD | git tag --contains)
           echo $MEMGRAPH_MAGE_VERSION
-          echo "MAGE_VERSION=${MEMGRAPH_MAGE_VERSION:1}" >> $GITHUB_ENV
+          MEMGRAPH_MAGE_VERSION=${MEMGRAPH_MAGE_VERSION#v}
+          echo "MAGE_VERSION=${MEMGRAPH_MAGE_VERSION%%-*}" >> $GITHUB_ENV
 
       - name: Set Memgraph Platform version
         run: |
@@ -67,8 +72,8 @@ jobs:
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Download memgraph binaries
         run: |
@@ -123,7 +128,8 @@ jobs:
           git fetch --all --tags
           MEMGRAPH_MAGE_VERSION=$(git rev-parse --verify HEAD | git tag --contains)
           echo $MEMGRAPH_MAGE_VERSION
-          echo "MAGE_VERSION=${MEMGRAPH_MAGE_VERSION:1}" >> $GITHUB_ENV
+          MEMGRAPH_MAGE_VERSION=${MEMGRAPH_MAGE_VERSION#v}
+          echo "MAGE_VERSION=${MEMGRAPH_MAGE_VERSION%%-*}" >> $GITHUB_ENV
 
       - name: Set Memgraph Platform version
         run: |
@@ -142,7 +148,7 @@ jobs:
       - name: Log in to Docker Hub
         run: |
           security unlock-keychain -p ${{ secrets.HOST_PASSWORD }}
-          docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+          docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Download memgraph binaries
         run: |
@@ -187,13 +193,8 @@ jobs:
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Download memgraph binaries
-        run: |
-          curl -L https://download.memgraph.com/memgraph/v${{ github.event.inputs.memgraph_version }}/debian-11-aarch64/memgraph_${{ github.event.inputs.memgraph_version }}-1_arm64.deb > memgraph-arm64.deb
-          curl -L https://download.memgraph.com/memgraph/v${{ github.event.inputs.memgraph_version }}/debian-11/memgraph_${{ github.event.inputs.memgraph_version }}-1_amd64.deb > memgraph-amd64.deb
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Get Memgraph Lab release version
         run: |
@@ -209,7 +210,8 @@ jobs:
           git fetch --all --tags
           MEMGRAPH_MAGE_VERSION=$(git rev-parse --verify HEAD | git tag --contains)
           echo $MEMGRAPH_MAGE_VERSION
-          echo "MAGE_VERSION=${MEMGRAPH_MAGE_VERSION:1}" >> $GITHUB_ENV
+          MEMGRAPH_MAGE_VERSION=${MEMGRAPH_MAGE_VERSION#v}
+          echo "MAGE_VERSION=${MEMGRAPH_MAGE_VERSION%%-*}" >> $GITHUB_ENV
 
       - name: Set Memgraph Platform version
         run: |
@@ -224,9 +226,6 @@ jobs:
 
       - name: Build single image
         run: |
-          docker pull $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.PLATFORM_VERSION }}-amd
-          docker pull $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.PLATFORM_VERSION }}-arm
-
           docker buildx imagetools create \
           --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:${{ env.PLATFORM_VERSION }} \
           --tag $DOCKER_ORGANIZATION_NAME/$DOCKER_REPOSITORY_NAME:latest \
@@ -235,16 +234,16 @@ jobs:
 
       - name: Remove redundant ARM
         run: |
-          ./tools/remove_docker_tag.sh ${{ secrets.DOCKER_USERNAME }} \
-            ${{ secrets.DOCKER_PASSWORD }} \
+          ./tools/remove_docker_tag.sh ${{ secrets.DOCKERHUB_USERNAME }} \
+            ${{ secrets.DOCKERHUB_TOKEN }} \
             $DOCKER_ORGANIZATION_NAME \
             $DOCKER_REPOSITORY_NAME \
             ${{ env.PLATFORM_VERSION }}-arm
 
       - name: Remove redundant AMD
         run: |
-          ./tools/remove_docker_tag.sh ${{ secrets.DOCKER_USERNAME }} \
-            ${{ secrets.DOCKER_PASSWORD }} \
+          ./tools/remove_docker_tag.sh ${{ secrets.DOCKERHUB_USERNAME }} \
+            ${{ secrets.DOCKERHUB_TOKEN }} \
             $DOCKER_ORGANIZATION_NAME \
             $DOCKER_REPOSITORY_NAME \
             ${{ env.PLATFORM_VERSION }}-amd
