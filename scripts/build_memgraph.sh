@@ -54,8 +54,12 @@ build() {
   # TODO(gitbuda): if install fails -> everything cascades -> make sure each of these commands stops the build
   ./init
   mkdir -p build && cd build
-  cmake -DCMAKE_BUILD_TYPE="$MGPLAT_MG_BUILD_TYPE" .. && \
-    make -j"$MGPLAT_CORES" && make -j"$MGPLAT_CORES" mgconsole
+  if [ "$(architecture)" = "arm64" ] || [ "$(architecture)" = "aarch64" ]; then
+    cmake -DCMAKE_BUILD_TYPE="$MGPLAT_MG_BUILD_TYPE" -DMG_ARCH="ARM64" ..
+  else
+    cmake -DCMAKE_BUILD_TYPE="$MGPLAT_MG_BUILD_TYPE" ..
+  fi
+  make -j"$MGPLAT_CORES" && make -j"$MGPLAT_CORES" mgconsole
   mkdir -p output && cd output
   ${MGPLAT_CPACK[$OPERATING_SYSTEM_FAMILY]}
 }
