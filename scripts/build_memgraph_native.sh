@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-set -eox pipefail
+# NOTE: -u is not an option here because toolchain activate fails (a better
+# ZSH_NAME check required).
+set -eo pipefail
 DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 MGPLAT_TOOLCHAIN_ROOT="${MGPLAT_TOOLCHAIN_ROOT:-/opt/toolchain-v4}"
@@ -13,6 +15,10 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
 else
   MGPLAT_CORES="${MGPLAT_CORES:-8}"
 fi
+declare -A MGPLAT_CPACK
+MGPLAT_CPACK[ubuntu]="cpack -G DEB --config ../CPackConfig.cmake"
+MGPLAT_CPACK[debian]="cpack -G DEB --config ../CPackConfig.cmake"
+MGPLAT_DIST_BINARY="$DIR/dist/binary"
 # TODO(gitbuda): Update print_help
 print_help() {
   echo -e "ENV VARS:"
@@ -30,28 +36,28 @@ pull_memgraph_and_os() {
   cd "$MGPLAT_MG_ROOT"
   git checkout "$MGPLAT_MG_TAG"
   git pull origin "$MGPLAT_MG_TAG"
-  # Required to get the underlying opearting system
+  # shellcheck disable=SC1091
   source "$MGPLAT_MG_ROOT/environment/util.sh"
+  # Required to get the underlying opearting system
   OPERATING_SYSTEM_FAMILY="$(operating_system | cut -d "-" -f 1)"
 }
 
-declare -A MGPLAT_CPACK
-MGPLAT_CPACK[ubuntu]="cpack -G DEB --config ../CPackConfig.cmake"
-MGPLAT_CPACK[debian]="cpack -G DEB --config ../CPackConfig.cmake"
-
 build() {
-  # shellcheck disable=SC1091
   pull_memgraph_and_os
-  source "$MGPLAT_TOOLCHAIN_ROOT/activate"
   if [ "$(architecture)" = "arm64" ] || [ "$(architecture)" = "aarch64" ]; then
     OS_SCRIPT="$MGPLAT_MG_ROOT/environment/os/$(operating_system)-arm.sh"
   else
     OS_SCRIPT="$MGPLAT_MG_ROOT/environment/os/$(operating_system).sh"
   fi
-  $OS_SCRIPT install TOOLCHAIN_RUN_DEPS
-  $OS_SCRIPT install MEMGRAPH_BUILD_DEPS
-  # TODO(gitbuda): build_memgraph run install instead of check (SUDO)
-  # TODO(gitbuda): if install fails -> everything cascades -> make sure each of these commands stops the build
+  if [ "$EUID" -eq 0 ]; then # sudo or root -> it should be possible to just install deps
+    "$OS_SCRIPT" install TOOLCHAIN_RUN_DEPS
+    "$OS_SCRIPT" install MEMGRAPH_BUILD_DEPS
+  else # regular user -> privilege escalation required to install the system level deps
+    sudo "$OS_SCRIPT" install TOOLCHAIN_RUN_DEPS
+    sudo "$OS_SCRIPT" install MEMGRAPH_BUILD_DEPS
+  fi
+  # shellcheck disable=SC1091
+  source "$MGPLAT_TOOLCHAIN_ROOT/activate"
   ./init
   mkdir -p build && cd build
   if [ "$(architecture)" = "arm64" ] || [ "$(architecture)" = "aarch64" ]; then
@@ -65,11 +71,16 @@ build() {
 }
 
 clean() {
-  # TODO(gitbuda): Package will be deleted as well -> do we want that?
+  # NOTE: The output package might be deleted as well (from our mounted dir).
   cd "$MGPLAT_MG_ROOT"
-  rm -rf ./build
+  rm -rf ./build/*
   # TODO(gitbuda): Doesn't work if package_deb is called because of root (SUDO)
   ./libs/cleanup.sh
+}
+
+copy_binary() {
+  binary_name="$(basename $(readlink $MGPLAT_MG_ROOT/build/memgraph))"
+  cp -L "$MGPLAT_MG_ROOT/build/memgraph" "$MGPLAT_DIST_BINARY/$binary_name"
 }
 
 if [ "$#" == 0 ]; then
@@ -82,6 +93,9 @@ else
     ;;
     clean)
       clean
+    ;;
+    copy_binary)
+      copy_binary
     ;;
     *)
       print_help

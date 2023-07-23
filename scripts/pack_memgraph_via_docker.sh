@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -eox pipefail
+set -eo pipefail
 DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 # NOTE: The builder container image defines for which operating system Memgraph will be built.
@@ -46,16 +46,15 @@ docker_exec() {
 build_pack() {
   cd "$DIR"
   # shellcheck disable=SC1091
-  # TODO(gitbuda): This is a problem because the initial loading -> move at the top of the script.
-  source build_memgraph.sh
+  source build_memgraph_native.sh
   mkdir -p dist/binary
   docker_run "$MGPLAT_CNT_NAME" "$MGPLAT_CNT_IMAGE"
-  docker cp "$DIR/build_memgraph.sh" "$MGPLAT_CNT_NAME:/"
+  docker cp "$DIR/build_memgraph_native.sh" "$MGPLAT_CNT_NAME:/"
   docker_exec "git config --global --add safe.directory $MGPLAT_CNT_MG_ROOT"
   mg_root="MGPLAT_MG_ROOT=$MGPLAT_CNT_MG_ROOT"
   mg_tag="MGPLAT_MG_TAG=$MGPLAT_MG_TAG"
   mg_build_type="MGPLAT_MG_BUILD_TYPE=$MGPLAT_MG_BUILD_TYPE"
-  docker_exec "$mg_root $mg_build_type $mg_tag /build_memgraph.sh build"
+  docker_exec "$mg_root $mg_build_type $mg_tag /build_memgraph_native.sh build"
 }
 
 if [ "$#" == 0 ]; then
