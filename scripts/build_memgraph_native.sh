@@ -28,7 +28,7 @@ print_help() {
   echo -e "  MGPLAT_CORES          -> number of cores to build memgraph"
   echo -e ""
   echo -e "how to run?"
-  echo -e " $0 [build|copy_binary|cleanup]"
+  echo -e " $0 [build|copy_binary|copy_package|cleanup]"
   exit 1
 }
 
@@ -77,8 +77,17 @@ cleanup() {
 }
 
 copy_binary() {
-  binary_name="$(basename $(readlink $MGPLAT_MG_ROOT/build/memgraph))"
+  if [ ! -f "$MGPLAT_MG_ROOT/build/memgraph" ]; then
+    echo "Unable to find memgraph under the build folder"
+    exit 1
+  fi
+  binary_name="$(basename $(readlink "$MGPLAT_MG_ROOT"/build/memgraph))"
   cp -L "$MGPLAT_MG_ROOT/build/memgraph" "$MGPLAT_DIST_BINARY/$binary_name"
+}
+
+copy_package() {
+  # NOTE: dist/package is mounted -> root is required -> think about better way
+  sudo cp "$MGPLAT_MG_ROOT"/build/output/memgraph* "$DIR/dist/package"
 }
 
 if [ "$#" == 0 ]; then
@@ -91,6 +100,9 @@ else
     ;;
     copy_binary)
       copy_binary
+    ;;
+    copy_package)
+      copy_package
     ;;
     cleanup)
       clean
