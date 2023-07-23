@@ -4,7 +4,9 @@ DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 MAGE_DIR="$DIR/../mage"
 print_help() {
-  echo -e "how to run?"
+  echo -e "Builds memgraph mage Docker image."
+  echo -e ""
+  echo -e "How to run?"
   echo -e "  $0 [-h|build src_package_path image_name]"
   exit 1
 }

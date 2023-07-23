@@ -10,14 +10,17 @@ MGPLAT_MG_TAG="${MGPLAT_MG_TAG:-master}"
 MGPLAT_MG_BUILD_TYPE="${MGPLAT_MG_BUILD_TYPE:-RelWithDebInfo}"
 MGPLAT_DIST_BINARY="$DIR/dist/binary"
 print_help() {
-  echo -e "env vars:"
+  echo -e "Builds memgraph binary and package via Docker build container."
+  echo -e ""
+  echo -e "Env vars:"
   echo -e "  MGPLAT_CNT_IMAGE     -> Docker image used to build and pack memgraph"
   echo -e "  MGPLAT_CNT_NAME      -> the name of builder Docker container"
   echo -e "  MGPLAT_CNT_MG_ROOT   -> memgraph root directory inside the container"
   echo -e "  MGPLAT_MG_TAG        -> git ref/branch of memgraph to build"
   echo -e "  MGPLAT_MG_BUILD_TYPE -> Debug|Release|RelWithDebInfo"
   echo -e ""
-  echo -e "$0 [pack|cleanup|copy_binary]"
+  echo -e "How to run?"
+  echo -e "  $0 [pack|cleanup|copy_binary]"
   exit 1
 }
 

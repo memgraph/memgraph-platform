@@ -5,10 +5,12 @@ DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 MGPLAT_ROOT="$DIR/../"
 MGPLAT_GHA_PAT_TOKEN="${MGPLAT_GHA_PAT_TOKEN:-github_personal_access_token}"
 print_help() {
-  echo -e "ENV VARS:"
+  echo -e "Builds memgraph platform Docker image."
+  echo -e ""
+  echo -e "Env vars:"
   echo -e "  MGPLAT_GHA_PAT_TOKEN -> Github PAT token to download Lab's NPM package"
   echo -e ""
-  echo -e "how to run?"
+  echo -e "How to run?"
   echo -e "  $0 [-h|build src_package_path image_name]"
   exit 1
 }

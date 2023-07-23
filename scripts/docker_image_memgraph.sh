@@ -4,7 +4,9 @@ DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 MEMGRAPH_DOCKER_DIR="$DIR/../mage/cpp/memgraph/release/docker"
 print_help() {
-  echo -e "how to run?"
+  echo -e "Builds memgraph Docker image."
+  echo -e ""
+  echo -e "How to run?"
   echo -e "  $0 [-h|build src_package_path]"
   exit 1
 }
