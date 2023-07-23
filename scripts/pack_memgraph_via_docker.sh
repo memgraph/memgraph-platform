@@ -5,15 +5,19 @@ DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 # NOTE: The builder container image defines for which operating system Memgraph will be built.
 MGPLAT_CNT_IMAGE="${MGPLAT_CNT_IMAGE:-memgraph/memgraph-builder:v4_debian-10}"
 MGPLAT_CNT_NAME="${MGPLAT_CNT_NAME:-mgbuild_builder}"
-MGPLAT_MG_ROOT="${MGPLAT_MG_ROOT:-$DIR/../mage/cpp/memgraph}"
 MGPLAT_CNT_MG_ROOT="${MGPLAT_CNT_MG_ROOT:-/platform/mage/cpp/memgraph}"
 MGPLAT_MG_TAG="${MGPLAT_MG_TAG:-master}"
 MGPLAT_MG_BUILD_TYPE="${MGPLAT_MG_BUILD_TYPE:-RelWithDebInfo}"
-# TODO(gitbuda): Comput the latest binary name, sym link is enough it just has to be followed
-MGPLAT_MG_BIN_NAME="memgraph-2.8.0+29~84721f7e0_RelWithDebInfo"
-# TODO(gitbuda): Update print_help
+MGPLAT_DIST_BINARY="$DIR/dist/binary"
 print_help() {
-  echo -e "$0 [copy]"
+  echo -e "env vars:"
+  echo -e "  MGPLAT_CNT_IMAGE     -> Docker image used to build and pack memgraph"
+  echo -e "  MGPLAT_CNT_NAME      -> the name of builder Docker container"
+  echo -e "  MGPLAT_CNT_MG_ROOT   -> memgraph root directory inside the container"
+  echo -e "  MGPLAT_MG_TAG        -> git ref/branch of memgraph to build"
+  echo -e "  MGPLAT_MG_BUILD_TYPE -> Debug|Release|RelWithDebInfo"
+  echo -e ""
+  echo -e "$0 [pack|cleanup|copy_binary]"
   exit 1
 }
 
@@ -57,25 +61,37 @@ build_pack() {
   docker_exec "$mg_root $mg_build_type $mg_tag /build_memgraph_native.sh build"
 }
 
+cleanup() {
+  docker_exec "rm -rf $MGPLAT_CNT_MG_ROOT/build/*"
+  docker_exec "$MGPLAT_CNT_MG_ROOT/libs/cleanup.sh"
+}
+
+copy_binary() {
+  cnt_cmd="echo \$(readlink $MGPLAT_CNT_MG_ROOT/build/memgraph)"
+  cnt_binary_path=$(docker exec "$MGPLAT_CNT_NAME" bash -c "$cnt_cmd")
+  binary_name="$(basename $cnt_binary_path)"
+  src_cnt_binary_path="$MGPLAT_CNT_NAME:$cnt_binary_path"
+  docker cp -L "$src_cnt_binary_path" "$DIR/dist/binary/"
+}
+
 if [ "$#" == 0 ]; then
   build_pack
 else
   case "$1" in
-    copy)
-      cnt_binary_paths="$(docker exec "$MGPLAT_CNT_NAME" bash -c "ls $MGPLAT_CNT_MG_DIR/build/memgraph-*")"
-      for cnt_binary_path in $cnt_binary_paths; do
-        src_cnt_binary_path="$MGPLAT_CNT_NAME:$cnt_binary_path"
-        docker cp "$src_cnt_binary_path" "$DIR/dist/binary/"
-      done
+    pack)
+      build_pack
+    ;;
+    # NOTE: The output package might be deleted as well (from our mounted dir).
+    cleanup)
+      cleanup
+    ;;
+    # Useful if you need memgraph binary for a specific operating system, e.g.
+    # Debian 10 binary to run under Jepsen
+    copy_binary)
+      copy_binary
     ;;
     *)
       print_help
     ;;
   esac
 fi
-
-# # TODO(gitbuda): option for cleanup (docker rmi builder + package) + add a prompt for each command because the build process take long time.
-# cd "$MGPLAT_MEMGRAPH_ROOT/build"
-# sudo rm -rf ./*
-# cd "$MGPLAT_MEMGRAPH_ROOT/libs"
-# sudo ./cleanup.sh

@@ -19,16 +19,16 @@ declare -A MGPLAT_CPACK
 MGPLAT_CPACK[ubuntu]="cpack -G DEB --config ../CPackConfig.cmake"
 MGPLAT_CPACK[debian]="cpack -G DEB --config ../CPackConfig.cmake"
 MGPLAT_DIST_BINARY="$DIR/dist/binary"
-# TODO(gitbuda): Update print_help
 print_help() {
-  echo -e "ENV VARS:"
-  echo -e "\tMGPLAT_TOOLCHAIN_ROOT\t   -> root directory of the toolchain"
-  echo -e "\tMGPLAT_MG_ROOT\t   -> root directory of memgraph"
-  echo -e "\tMGPLAT_MG_TAG\t   -> git ref/branch of memgraph to build"
-  echo -e "\tMGPLAT_MG_BUILD_TYPE -> Debug|Release|RelWithDebInfo"
-  echo -e "\tMGPLAT_CORES\t\t   -> number of cores to build memgraph"
-  echo -e "RUN:"
-  echo -e "\t$0 [build|clean]"
+  echo -e "env vars:"
+  echo -e "  MGPLAT_TOOLCHAIN_ROOT -> root directory of the toolchain"
+  echo -e "  MGPLAT_MG_ROOT        -> root directory of memgraph"
+  echo -e "  MGPLAT_MG_TAG         -> git ref/branch of memgraph to build"
+  echo -e "  MGPLAT_MG_BUILD_TYPE  -> Debug|Release|RelWithDebInfo"
+  echo -e "  MGPLAT_CORES          -> number of cores to build memgraph"
+  echo -e ""
+  echo -e "how to run?"
+  echo -e " $0 [build|copy_binary|cleanup]"
   exit 1
 }
 
@@ -70,11 +70,9 @@ build() {
   ${MGPLAT_CPACK[$OPERATING_SYSTEM_FAMILY]}
 }
 
-clean() {
-  # NOTE: The output package might be deleted as well (from our mounted dir).
+cleanup() {
   cd "$MGPLAT_MG_ROOT"
   rm -rf ./build/*
-  # TODO(gitbuda): Doesn't work if package_deb is called because of root (SUDO)
   ./libs/cleanup.sh
 }
 
@@ -91,11 +89,11 @@ else
     build)
       build
     ;;
-    clean)
-      clean
-    ;;
     copy_binary)
       copy_binary
+    ;;
+    cleanup)
+      clean
     ;;
     *)
       print_help
