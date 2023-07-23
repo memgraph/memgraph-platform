@@ -1,17 +1,15 @@
 #!/usr/bin/env bash
-set -eo pipefail
+set -eox pipefail
 DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 # NOTE: The builder container image defines for which operating system Memgraph will be built.
-# TODO(gitbuda): Take from env variable
 MGPLAT_CNT_IMAGE="${MGPLAT_CNT_IMAGE:-memgraph/memgraph-builder:v4_debian-10}"
-MGPLAT_CNT_NAME="mgbuild_builder"
-MGPLAT_MEMGRAPH_ROOT="${MGPLAT_MEMGRAPH_ROOT:-$DIR/../mage/cpp/memgraph}"
-MGPLAT_CNT_MG_DIR="/platform/mage/cpp/memgraph"
-MGPLAT_MEMGRAPH_TAG="${MGPLAT_MEMGRAPH_TAG:-master}"
-MGPLAT_MEMGRAPH_BUILD_TYPE="${MGPLAT_MEMGRAPH_BUILD_TYPE:-RelWithDebInfo}"
-MGPLAT_MG_DIST_BIN_NAME="${MGPLAT_MG_DIST_BIN_NAME:-memgraph}"
-# TODO(gitbuda): Comput the latest binary name
+MGPLAT_CNT_NAME="${MGPLAT_CNT_NAME:-mgbuild_builder}"
+MGPLAT_MG_ROOT="${MGPLAT_MG_ROOT:-$DIR/../mage/cpp/memgraph}"
+MGPLAT_CNT_MG_ROOT="${MGPLAT_CNT_MG_ROOT:-/platform/mage/cpp/memgraph}"
+MGPLAT_MG_TAG="${MGPLAT_MG_TAG:-master}"
+MGPLAT_MG_BUILD_TYPE="${MGPLAT_MG_BUILD_TYPE:-RelWithDebInfo}"
+# TODO(gitbuda): Comput the latest binary name, sym link is enough it just has to be followed
 MGPLAT_MG_BIN_NAME="memgraph-2.8.0+29~84721f7e0_RelWithDebInfo"
 # TODO(gitbuda): Update print_help
 print_help() {
@@ -29,7 +27,7 @@ docker_run () {
       fi
       docker run -d \
         -v "$DIR/..:/platform" \
-        -v "$DIR/dist/package:$MGPLAT_CNT_MG_DIR/build/output" \
+        -v "$DIR/dist/package:$MGPLAT_CNT_MG_ROOT/build/output" \
         --network host --name "$cnt_name" "$cnt_image"
   fi
   echo "The $cnt_image container is active under $cnt_name name!"
@@ -53,10 +51,10 @@ build_pack() {
   mkdir -p dist/binary
   docker_run "$MGPLAT_CNT_NAME" "$MGPLAT_CNT_IMAGE"
   docker cp "$DIR/build_memgraph.sh" "$MGPLAT_CNT_NAME:/"
-  docker_exec "git config --global --add safe.directory $MGPLAT_CNT_MG_DIR"
-  mg_root="MGPLAT_MEMGRAPH_ROOT=$MGPLAT_CNT_MG_DIR"
-  mg_tag="MGPLAT_MEMGRAPH_TAG=$MGPLAT_MEMGRAPH_TAG"
-  mg_build_type="MGPLAT_MEMGRAPH_BUILD_TYPE=$MGPLAT_MEMGRAPH_BUILD_TYPE"
+  docker_exec "git config --global --add safe.directory $MGPLAT_CNT_MG_ROOT"
+  mg_root="MGPLAT_MG_ROOT=$MGPLAT_CNT_MG_ROOT"
+  mg_tag="MGPLAT_MG_TAG=$MGPLAT_MG_TAG"
+  mg_build_type="MGPLAT_MG_BUILD_TYPE=$MGPLAT_MG_BUILD_TYPE"
   docker_exec "$mg_root $mg_build_type $mg_tag /build_memgraph.sh build"
 }
 
