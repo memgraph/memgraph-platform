@@ -72,7 +72,7 @@ COPY memgraph-${TARGETARCH}.deb .
 RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb
 
 EXPOSE 3000 7444 7687
-COPY configs/ /etc/supervisor/conf.d/
+COPY configs/ /etc/supervisor/
 
 RUN chmod 777 -R /var/log/memgraph
 RUN chmod 777 -R /var/lib/memgraph
@@ -82,4 +82,4 @@ RUN chmod 777 /usr/lib/memgraph/memgraph
 ENV MEMGRAPH="--also-log-to-stderr"
 
 ENTRYPOINT [ "/usr/bin/supervisord" ]
-CMD [ "-c", "/etc/supervisor/conf.d/supervisord.conf" ]
+CMD [ "-c", "/etc/supervisor/supervisord.conf" ]

@@ -35,6 +35,8 @@ You can start Memgraph Platform with:
 docker run -p 3000:3000 -p 7687:7687 memgraph/memgraph-platform
 ```
 
+### mgconsole
+
 Start `mgconsole` with:
 
 ```
@@ -50,6 +52,22 @@ sure to provide the following argument `--host host.docker.internal`:
 
 ```
 docker run -ti --entrypoint=mgconsole memgraph/memgraph-platform --host host.docker.internal
+```
+
+### Lab only
+
+Run only the Lab with the following command:
+
+```
+docker run -p 3000:3000 memgraph/memgraph-platform -c /etc/supervisor/supervisord-lab-only.conf
+```
+
+### Memgraph only
+
+Run only the Lab with the following command:
+
+```
+docker run -p 7687:7687 memgraph/memgraph-platform -c /etc/supervisor/supervisord-memgraph-only.conf
 ```
 
 ## :hourglass: Versioning

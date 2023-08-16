@@ -135,4 +135,4 @@ RUN chmod 777 /usr/lib/memgraph/memgraph
 ENV MEMGRAPH="--also-log-to-stderr"
 
 ENTRYPOINT [ "/usr/bin/supervisord" ]
-CMD [ "-c", "/etc/supervisor/conf.d/supervisord.conf" ]
+CMD [ "-c", "/etc/supervisor/supervisord.conf" ]
