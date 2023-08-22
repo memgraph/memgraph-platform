@@ -124,17 +124,15 @@ RUN rm -rf /mage \
     && apt-get -y --purge autoremove clang git curl python3-pip python3-dev cmake build-essential \
     && apt-get clean
 
-EXPOSE 3000 7687
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+EXPOSE 3000 7444 7687
+COPY configs/ /etc/supervisor/conf.d/
 
 RUN chmod 777 -R /var/log/memgraph
 RUN chmod 777 -R /var/lib/memgraph
 RUN chmod 777 -R /usr/lib/memgraph
 RUN chmod 777 /usr/lib/memgraph/memgraph
 
-ENV MEMGRAPH=""
-ENV MGCONSOLE=""
+ENV MEMGRAPH="--also-log-to-stderr"
 
-CMD /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf >> /dev/null \
-    & echo "Memgraph Lab is running at localhost:3000\n"; \
-    while ! nc -z localhost 7687; do sleep 1; done; /usr/bin/mgconsole $MGCONSOLE
+ENTRYPOINT [ "/usr/bin/supervisord" ]
+CMD [ "-c", "/etc/supervisor/supervisord.conf" ]

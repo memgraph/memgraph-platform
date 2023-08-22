@@ -1,8 +1,8 @@
 [submodule "mage"]
 	path = mage
-	url = git@github.com:memgraph/mage.git
+	url = https://github.com/memgraph/mage.git
 	branch = main
 [submodule "lab"]
 	path = lab
-	url = git@github.com:memgraph/lab
+	url = https://github.com/memgraph/lab.git
 	branch = dev

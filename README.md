@@ -32,7 +32,42 @@ with only Memgraph and Memgraph Lab.
 You can start Memgraph Platform with:
 
 ```
-docker run -it --rm -p 3000:3000 -p 7687:7687 memgraph/memgraph-platform
+docker run -p 3000:3000 -p 7687:7687 memgraph/memgraph-platform
+```
+
+### mgconsole
+
+Start `mgconsole` with:
+
+```
+# get the running-container-id with `docker ps`
+docker exec -ti <running-container-id> mgconsole
+
+# or
+docker run -ti --entrypoint=mgconsole memgraph/memgraph-platform
+```
+
+When connecting to local Memgraph with `mgconsole` on Windows and Mac, make
+sure to provide the following argument `--host host.docker.internal`:
+
+```
+docker run -ti --entrypoint=mgconsole memgraph/memgraph-platform --host host.docker.internal
+```
+
+### Lab only
+
+Run only the Lab with the following command:
+
+```
+docker run -p 3000:3000 memgraph/memgraph-platform -c /etc/supervisor/supervisord-lab-only.conf
+```
+
+### Memgraph only
+
+Run only the Lab with the following command:
+
+```
+docker run -p 7687:7687 memgraph/memgraph-platform -c /etc/supervisor/supervisord-memgraph-only.conf
 ```
 
 ## :hourglass: Versioning
@@ -58,9 +93,18 @@ In other words if we have `memgraph-platform:2.2.0`, it means it contains Memgra
 
 ### :whale: Docker build
 
-1. Run `docker build . -t test`
-2. Run `docker run --rm -it -p 3000:3000 -p 7687:7687 memgraph-platform:latest`
-3. Go to `http://localhost:3000` and connect to Memgrpah database with Memgraph
+To build docker image, you need to provide two build arguments:
+
+* `TARGETARCH` - a suffix of the specific local Memgraph debian version; for example if
+  you have a local debian package `memgraph-2.10-arm64.deb` that you want to build platform for, use
+  the following build argument: `--build-arg="TARGETARCH=2.10-arm64"`.
+
+* `NPM_PACKAGE_TOKEN` - npm token to install private libraries that Memgraph Lab uses, set
+  it up with the following argument: `--build-arg="NPM_PACKAGE_TOKEN=ghp_6..."`
+
+1. Run `docker build --build-arg="TARGETARCH=..." --build-arg="NPM_PACKAGE_TOKEN=..." . -t memgraph-platform`
+2. Run `docker run -p 3000:3000 -p 7687:7687 memgraph-platform`
+3. Go to `http://localhost:3000` and connect to Memgraph database with Memgraph
   Lab in order to test it out
 
 <p align="center">

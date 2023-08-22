@@ -1,5 +1,5 @@
 # Lab: Build backend
-FROM node:16-alpine as lab-base
+FROM node:18.15-alpine as lab-base
 
 WORKDIR /app
 # Python make and g++ are needed for arm node-gyp package
@@ -23,6 +23,8 @@ COPY lab/tsconfig.json .
 COPY lab/tsconfig.build.json .
 COPY lab/.env .
 
+RUN sed -i "s/NODE_ENV=local/NODE_ENV=platform/" ./.env
+
 COPY lab/backend/ ./backend/
 COPY lab/frontend/ ./frontend/
 
@@ -37,8 +39,6 @@ COPY --from=lab-base /app/dist-frontend /lab/dist-frontend
 
 COPY --from=lab-base /app/node_modules /lab/node_modules
 COPY --from=lab-base /app/.env /lab/.env
-
-RUN sed -i "s/HOTJAR_IS_ENABLED=false/HOTJAR_IS_ENABLED=true/" /lab/.env
 
 # Building and Memgraph
 RUN apt-get clean && \
@@ -59,7 +59,7 @@ RUN apt-get clean && \
   supervisor      \
   --no-install-recommends
 
-RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - \
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
   && apt-get install -y nodejs \
   && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -71,15 +71,15 @@ ARG TARGETARCH
 COPY memgraph-${TARGETARCH}.deb .
 RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb
 
-EXPOSE 3000 7687
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+EXPOSE 3000 7444 7687
+COPY configs/ /etc/supervisor/
 
 RUN chmod 777 -R /var/log/memgraph
 RUN chmod 777 -R /var/lib/memgraph
 RUN chmod 777 -R /usr/lib/memgraph
 RUN chmod 777 /usr/lib/memgraph/memgraph
 
-ENV MEMGRAPH=""
-ENV MGCONSOLE=""
+ENV MEMGRAPH="--also-log-to-stderr"
 
-CMD /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf >> /dev/null & echo "Memgraph Lab is running at localhost:3000\n"; while ! nc -z localhost 7687; do sleep 1; done; /usr/bin/mgconsole $MGCONSOLE
+ENTRYPOINT [ "/usr/bin/supervisord" ]
+CMD [ "-c", "/etc/supervisor/supervisord.conf" ]
