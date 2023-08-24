@@ -125,7 +125,7 @@ RUN rm -rf /mage \
     && apt-get clean
 
 EXPOSE 3000 7444 7687
-COPY configs/ /etc/supervisor/conf.d/
+COPY configs/ /etc/supervisor/
 
 RUN chmod 777 -R /var/log/memgraph
 RUN chmod 777 -R /var/lib/memgraph
