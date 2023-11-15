@@ -23,6 +23,7 @@ RUN apt-get update && apt-get install -y \
     python3-dev     `mage-memgraph` \
     clang           `mage-memgraph` \
     git             `mage-memgraph` \
+    unixodbc-dev        `mage-memgraph` \
     supervisor      `memgraph`\
     netcat         `memgraph-platform` \
     --no-install-recommends \
@@ -56,7 +57,7 @@ RUN git clone --recurse-submodules -b 0.9.x https://github.com/dmlc/dgl.git  \
 ###################################################################################################################################################
 
 # Lab: Build backend
-FROM node:16-alpine as lab-base
+FROM node:18.15-alpine as lab-base
 
 WORKDIR /app
 # Python make and g++ are needed for arm node-gyp package
@@ -79,6 +80,8 @@ COPY lab/tsconfig.json .
 COPY lab/tsconfig.build.json .
 COPY lab/.env .
 
+RUN sed -i "s/NODE_ENV=local/NODE_ENV=platform/" ./.env
+
 COPY lab/backend/ ./backend/
 COPY lab/frontend/ ./frontend/
 
@@ -99,14 +102,12 @@ COPY --from=lab-base /app/.env /lab/.env
 
 # This is needed for lab
 RUN apt-get update \
-    && curl -fsSL https://deb.nodesource.com/setup_16.x | bash - \
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # This is needed for memgraph built in algos
 RUN pip3 install --default-timeout=1000 networkx==2.4 numpy==1.21.4 scipy==1.7.3
-
-RUN sed -i "s/HOTJAR_IS_ENABLED=false/HOTJAR_IS_ENABLED=true/" /lab/.env
 
 #copy modules
 COPY --from=mage-dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules/
@@ -123,17 +124,15 @@ RUN rm -rf /mage \
     && apt-get -y --purge autoremove clang git curl python3-pip python3-dev cmake build-essential \
     && apt-get clean
 
-EXPOSE 3000 7687
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+EXPOSE 3000 7444 7687
+COPY configs/ /etc/supervisor/
 
 RUN chmod 777 -R /var/log/memgraph
 RUN chmod 777 -R /var/lib/memgraph
 RUN chmod 777 -R /usr/lib/memgraph
 RUN chmod 777 /usr/lib/memgraph/memgraph
 
-ENV MEMGRAPH=""
-ENV MGCONSOLE=""
+ENV MEMGRAPH="--also-log-to-stderr"
 
-CMD /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf >> /dev/null \
-    & echo "Memgraph Lab is running at localhost:3000\n"; \
-    while ! nc -z localhost 7687; do sleep 1; done; /usr/bin/mgconsole $MGCONSOLE
+ENTRYPOINT [ "/usr/bin/supervisord" ]
+CMD [ "-c", "/etc/supervisor/supervisord.conf" ]

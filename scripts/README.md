@@ -67,6 +67,19 @@ Docker image will be stored in folder `output` in `tar.gz` format, for example `
 
 **NOTE** Deb packages need to be stored in format `memgraph-{deb_name}_amd64.deb`, for example `memgraph-feature_amd64.deb` and you start script with `feature`.
 
+# Scripts for creating custom memgraph packages and docker images
+
+Run `{script}.sh -h` to figure the details and how to start building.
+
+## Notes
+
+* If you need builder image for any supported operating system, please take a
+  look under `memgraph/release/package/run.sh`. Under the
+  `memgraph/release/package/` there are Dockerfiles to build builder
+  containers.
+* Lab is a private repo so this build is unavailable to public
+  (`docker_image_platform.sh`). You can still build Memgraph + MAGE and use
+  downloaded Lab with your image.
 
 ## Loading custom docker image
 
@@ -81,3 +94,11 @@ and then used for example like this:
 ```
 docker run -it --rm -p 7687:7687 --name <NAME> <IMAGE_NAME>
 ```
+```
+docker load -i <IMAGE_NAME>.tar.gz
+```
+and then used for example like this:
+```
+docker run -it --rm -p 7687:7687 --name <NAME> <IMAGE_NAME>
+```
+Platform image has a specific run command, please refer to the root of this repo.
