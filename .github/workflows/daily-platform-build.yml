@@ -1,0 +1,55 @@
+name: Daily Platform Build
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        type: choice
+        description: "Build type"
+        default: 'ReleaseWithDebug'
+        options:
+          - Release
+          - ReleaseWithDebug
+          - Debug
+      toolchain_version:
+        type: choice
+        description: "Toolchain version"
+        default: 'v4'
+        options:
+          - v4
+          - v5
+
+jobs:
+  build_AMDx64:
+    name: "Build memgraph plaftorm AMDx64"
+    runs-on: [self-hosted, docker, X64]
+    env:
+      TARGET_OS: "debian-11"
+      TOOLCHAIN_VERSION: ${{ github.events.inputs.toolchain_version || 'v4' }}
+    steps:
+      - name: "Checkout repository and submodules"
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.PAT }}
+
+      - name: "Build memgraph"
+        run: |
+          cd platform/scripts 
+          ./pack_memgraph_via_docker.sh pack
+          ./pack_memgraph_via_docker.sh copy_binary
+          ./pack_memgraph_via_docker.sh cleanup
+        env:
+          MGPLAT_CNT_IMAGE="memgraph/memgraph-builder:$TOOLCHAIN_VERSION_$TARGET_OS"
+          MGPLAT_CNT_NAME="mgbuilder_$TARGET_OS"
+          MGPLAT_CNT_MG_ROOT="/platform/mage/cpp/memgraph"
+          MGPLAT_MG_TAG="master"
+          MGPLAT_MG_BUILD_TYPE=${{ github.event.inputs.build_type || 'ReleaseWithDebug' }}
+
+      - name: "Upload memgraph binary"
+        uses: actions/upload-artifact@v3
+        with:
+          name: memgraph-debian-11.deb
+          path: platform/scripts/dist/binary/memgraph
