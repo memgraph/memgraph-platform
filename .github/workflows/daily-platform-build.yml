@@ -42,11 +42,11 @@ jobs:
           ./pack_memgraph_via_docker.sh copy_binary
           ./pack_memgraph_via_docker.sh cleanup
         env:
-          MGPLAT_CNT_IMAGE="memgraph/memgraph-builder:$TOOLCHAIN_VERSION_$TARGET_OS"
-          MGPLAT_CNT_NAME="mgbuilder_$TARGET_OS"
-          MGPLAT_CNT_MG_ROOT="/platform/mage/cpp/memgraph"
-          MGPLAT_MG_TAG="master"
-          MGPLAT_MG_BUILD_TYPE=${{ github.event.inputs.build_type || 'ReleaseWithDebug' }}
+          MGPLAT_CNT_IMAGE: "memgraph/memgraph-builder:$TOOLCHAIN_VERSION_$TARGET_OS"
+          MGPLAT_CNT_NAME: "mgbuilder_$TARGET_OS"
+          MGPLAT_CNT_MG_ROOT: "/platform/mage/cpp/memgraph"
+          MGPLAT_MG_TAG: "master"
+          MGPLAT_MG_BUILD_TYPE: ${{ github.event.inputs.build_type || 'ReleaseWithDebug' }}
 
       - name: "Upload memgraph binary"
         uses: actions/upload-artifact@v3
