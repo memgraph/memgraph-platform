@@ -56,24 +56,18 @@ build_pack() {
   source build_memgraph_native.sh
   mkdir -p dist/binary
   docker_run "$MGPLAT_CNT_NAME" "$MGPLAT_CNT_IMAGE"
-  echo "--1--"
   docker cp "$DIR/build_memgraph_native.sh" "$MGPLAT_CNT_NAME:/"
-  echo "--2--"
   docker_exec "git config --global --add safe.directory $MGPLAT_CNT_MG_ROOT"
-  echo "--3--"
   mg_root="MGPLAT_MG_ROOT=$MGPLAT_CNT_MG_ROOT"
-  echo "--4--"
   mg_tag="MGPLAT_MG_TAG=$MGPLAT_MG_TAG"
-  echo "--5--"
   mg_build_type="MGPLAT_MG_BUILD_TYPE=$MGPLAT_MG_BUILD_TYPE"
-  echo "--6--"
   docker_exec "$mg_root $mg_build_type $mg_tag /build_memgraph_native.sh build"
-  echo "--7--"
 }
 
 cleanup() {
-  docker_exec "rm -rf $MGPLAT_CNT_MG_ROOT/build/*"
-  docker_exec "$MGPLAT_CNT_MG_ROOT/libs/cleanup.sh"
+  # docker_exec "rm -rf $MGPLAT_CNT_MG_ROOT/build/*"
+  # docker_exec "$MGPLAT_CNT_MG_ROOT/libs/cleanup.sh"
+  docker_stop_rm $MGPLAT_CNT_NAME
 }
 
 copy_binary() {

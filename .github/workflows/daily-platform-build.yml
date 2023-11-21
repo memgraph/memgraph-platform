@@ -23,7 +23,7 @@ on:
 jobs:
   build_AMDx64:
     name: "Build memgraph plaftorm AMDx64"
-    runs-on: [self-hosted, docker, X64]
+    runs-on: [self-hosted, Docker, X64]
     env:
       TARGET_OS: "debian-11"
       TOOLCHAIN_VERSION: ${{ github.events.inputs.toolchain_version || 'v4' }}
@@ -40,7 +40,7 @@ jobs:
           cd scripts 
           ./pack_memgraph_via_docker.sh pack
           ./pack_memgraph_via_docker.sh copy_binary
-          ./pack_memgraph_via_docker.sh cleanup
+          # ./pack_memgraph_via_docker.sh cleanup
         env:
           MGPLAT_CNT_IMAGE: "memgraph/memgraph-builder:${{ env.TOOLCHAIN_VERSION }}_${{ env.TARGET_OS }}"
           MGPLAT_CNT_NAME: "mgbuilder_${{ env.TARGET_OS }}"
