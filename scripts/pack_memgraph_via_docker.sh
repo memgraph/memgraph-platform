@@ -47,7 +47,7 @@ docker_stop_rm() {
 
 docker_exec() {
   cnt_cmd="$1"
-  docker exec -it "$MGPLAT_CNT_NAME" bash -c "$cnt_cmd"
+  docker exec "$MGPLAT_CNT_NAME" bash -c "$cnt_cmd"
 }
 
 build_pack() {
