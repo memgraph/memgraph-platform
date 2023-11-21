@@ -37,7 +37,7 @@ jobs:
 
       - name: "Build memgraph"
         run: |
-          cd platform/scripts 
+          cd scripts 
           ./pack_memgraph_via_docker.sh pack
           ./pack_memgraph_via_docker.sh copy_binary
           ./pack_memgraph_via_docker.sh cleanup
@@ -52,4 +52,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: memgraph-debian-11.deb
-          path: platform/scripts/dist/binary/memgraph
+          path: scripts/dist/binary/memgraph
