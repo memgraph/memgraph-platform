@@ -3,7 +3,7 @@ set -eo pipefail
 DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 # NOTE: The builder container image defines for which operating system Memgraph will be built.
-MGPLAT_CNT_IMAGE="${MGPLAT_CNT_IMAGE:-memgraph/memgraph-builder:v4_debian-10}"
+MGPLAT_CNT_IMAGE="${MGPLAT_CNT_IMAGE:-memgraph/memgraph-builder:v4_debian-11}"
 MGPLAT_CNT_NAME="${MGPLAT_CNT_NAME:-mgbuild_builder}"
 MGPLAT_CNT_MG_ROOT="${MGPLAT_CNT_MG_ROOT:-/platform/mage/cpp/memgraph}"
 MGPLAT_MG_TAG="${MGPLAT_MG_TAG:-master}"
