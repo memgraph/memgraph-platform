@@ -29,6 +29,13 @@ on:
         description: "Lab version (choose dev to use the latest source)"
         default: 'dev'
 
+env:
+  TOOLCHAIN_VERSION: ${{ github.events.inputs.toolchain_version || 'v4' }}
+  MG_BINARY_TARGET_PATH: "scripts/dist/binary/memgraph"
+  MEMGRAPH_TAG: ${{ github.event.inputs.memgraph_tag || 'master' }}
+  MAGE_TAG: ${{ github.event.inputs.mage_tag || 'main' }}
+  LAB_TAG: ${{ github.event.inputs.lab_tag || 'dev' }}
+
 jobs:
   build_amd64:
     name: "Build memgraph plaftorm amd64"
@@ -36,8 +43,6 @@ jobs:
     env:
       ARCHITECTURE: "amd64"
       TARGET_OS: "debian-11"
-      TOOLCHAIN_VERSION: ${{ github.events.inputs.toolchain_version || 'v4' }}
-      MG_BINARY_TARGET_PATH: "scripts/dist/binary/memgraph"
     steps:
       - name: "Checkout repository and submodules"
         uses: actions/checkout@v3
@@ -48,9 +53,9 @@ jobs:
 
       - name: "Checkout correct versions in submodules"
         run: |
-          cd mage/cpp/memgraph && git checkout ${{ github.event.inputs.memgraph_tag }} && cd ../..
-          git checkout${{ github.event.inputs.mage_tag }} && cd ..
-          cd lab && git checkout ${{ github.event.inputs.lab_tag }} && cd ..
+          cd mage/cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }} && cd ../..
+          git checkout${{ env.MAGE_TAG }} && cd ..
+          cd lab && git checkout ${{ env.LAB_TAG }} && cd ..
 
       - name: "Build memgraph"
         run: |
@@ -62,7 +67,7 @@ jobs:
           MGPLAT_CNT_IMAGE: "memgraph/memgraph-builder:${{ env.TOOLCHAIN_VERSION }}_${{ env.TARGET_OS }}"
           MGPLAT_CNT_NAME: "mgbuilder_${{ env.TARGET_OS }}"
           MGPLAT_CNT_MG_ROOT: "/platform/mage/cpp/memgraph"
-          MGPLAT_MG_TAG: ${{ github.event.inputs.memgraph_tag }}
+          MGPLAT_MG_TAG: ${{ env.MEMGRAPH_TAG }}
           MGPLAT_MG_BUILD_TYPE: ${{ github.event.inputs.build_type || 'ReleaseWithDebug' }}
 
       - name: "Upload memgraph binary"
@@ -74,7 +79,7 @@ jobs:
       - name: "Build Mage"
         run: |
           cd scripts 
-          ./docker_image_mage.sh build ${{ env.MG_BINARY_PATH }} mage_${{ env.ARCHITECTURE } ${{ env.ARCHITECTURE }}}
+          ./docker_image_mage.sh build ${{ env.MG_BINARY_PATH }} mage_${{ env.ARCHITECTURE } ${{ env.ARCHITECTURE }}
 
       - name: "Upload mage docker image"
         uses: actions/upload-artifact@v3
@@ -86,6 +91,8 @@ jobs:
         run: |
           cd scripts 
           ./docker_image_platform ${{ env.MG_BINARY_PATH }} memgraph-platform_${{ env.ARCHITECTURE }} ${{ env.ARCHITECTURE }}
+        env:
+          MGPLAT_GHA_PAT_TOKEN: ${{ secrets.PAT }}
 
       - name: "Upload memgraph platform docker image"
         uses: actions/upload-artifact@v3
@@ -99,8 +106,6 @@ jobs:
     env:
       ARCHITECTURE: "arm64"
       TARGET_OS: "debian-11-arm"
-      TOOLCHAIN_VERSION: ${{ github.events.inputs.toolchain_version || 'v4' }}
-      MG_BINARY_TARGET_PATH: "scripts/dist/binary/memgraph"
     steps:
       - name: "Checkout repository and submodules"
         uses: actions/checkout@v3
@@ -111,9 +116,9 @@ jobs:
 
       - name: "Checkout correct versions in submodules"
         run: |
-          cd mage/cpp/memgraph && git checkout ${{ github.event.inputs.memgraph_tag }} && cd ../..
-          git checkout${{ github.event.inputs.mage_tag }} && cd ..
-          cd lab && git checkout ${{ github.event.inputs.lab_tag }} && cd ..
+          cd mage/cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }} && cd ../..
+          git checkout${{ env.MAGE_TAG }} && cd ..
+          cd lab && git checkout ${{ env.LAB_TAG }} && cd ..
 
       - name: "Build memgraph"
         run: |
@@ -125,7 +130,7 @@ jobs:
           MGPLAT_CNT_IMAGE: "memgraph/memgraph-builder:${{ env.TOOLCHAIN_VERSION }}_${{ env.TARGET_OS }}"
           MGPLAT_CNT_NAME: "mgbuilder_${{ env.TARGET_OS }}"
           MGPLAT_CNT_MG_ROOT: "/platform/mage/cpp/memgraph"
-          MGPLAT_MG_TAG: ${{ github.event.inputs.memgraph_tag }}
+          MGPLAT_MG_TAG: ${{ env.MEMGRAPH_TAG }}
           MGPLAT_MG_BUILD_TYPE: ${{ github.event.inputs.build_type || 'ReleaseWithDebug' }}
 
       - name: "Upload memgraph binary"
@@ -136,9 +141,8 @@ jobs:
 
       - name: "Build Mage"
         run: |
-          git checkout main
           cd scripts 
-          ./docker_image_mage.sh build ${{ env.MG_BINARY_PATH }} mage_${{ env.ARCHITECTURE } ${{ env.ARCHITECTURE }}}
+          ./docker_image_mage.sh build ${{ env.MG_BINARY_PATH }} mage_${{ env.ARCHITECTURE } ${{ env.ARCHITECTURE }}
 
       - name: "Upload mage docker image"
         uses: actions/upload-artifact@v3
@@ -150,6 +154,8 @@ jobs:
         run: |
           cd scripts 
           ./docker_image_platform ${{ env.MG_BINARY_PATH }} memgraph-platform_${{ env.ARCHITECTURE }} ${{ env.ARCHITECTURE }}
+        env:
+          MGPLAT_GHA_PAT_TOKEN: ${{ secrets.PAT }}
 
       - name: "Upload memgraph platform docker image"
         uses: actions/upload-artifact@v3
