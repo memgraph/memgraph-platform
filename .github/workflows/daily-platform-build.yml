@@ -54,7 +54,7 @@ jobs:
       - name: "Checkout correct versions in submodules"
         run: |
           cd mage/cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }} && cd ../..
-          git checkout${{ env.MAGE_TAG }} && cd ..
+          git checkout ${{ env.MAGE_TAG }} && cd ..
           cd lab && git checkout ${{ env.LAB_TAG }} && cd ..
 
       - name: "Build memgraph"
@@ -117,7 +117,7 @@ jobs:
       - name: "Checkout correct versions in submodules"
         run: |
           cd mage/cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }} && cd ../..
-          git checkout${{ env.MAGE_TAG }} && cd ..
+          git checkout ${{ env.MAGE_TAG }} && cd ..
           cd lab && git checkout ${{ env.LAB_TAG }} && cd ..
 
       - name: "Build memgraph"
