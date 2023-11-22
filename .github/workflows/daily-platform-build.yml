@@ -62,7 +62,7 @@ jobs:
           cd scripts 
           ./pack_memgraph_via_docker.sh pack
           ./pack_memgraph_via_docker.sh cleanup
-          mv dist/pacakge/memgraph*.deb dist/pacakge/memgraph.deb
+          mv dist/package/memgraph*.deb dist/package/memgraph.deb
         env:
           MGPLAT_CNT_IMAGE: "memgraph/memgraph-builder:${{ env.TOOLCHAIN_VERSION }}_${{ env.TARGET_OS }}"
           MGPLAT_CNT_NAME: "mgbuilder_${{ env.TARGET_OS }}"
@@ -125,7 +125,7 @@ jobs:
           cd scripts 
           ./pack_memgraph_via_docker.sh pack
           ./pack_memgraph_via_docker.sh cleanup
-          mv dist/pacakge/memgraph*.deb dist/pacakge/memgraph.deb
+          mv dist/package/memgraph*.deb dist/package/memgraph.deb
         env:
           MGPLAT_CNT_IMAGE: "memgraph/memgraph-builder:${{ env.TOOLCHAIN_VERSION }}_${{ env.TARGET_OS }}"
           MGPLAT_CNT_NAME: "mgbuilder_${{ env.TARGET_OS }}"
