@@ -34,6 +34,7 @@ docker_run () {
           docker rm "$cnt_name"
       fi
       docker run -d \
+        -v "$DIR/..:/platform" \
         --network host --name "$cnt_name" "$cnt_image"
   fi
   echo "The $cnt_image container is active under $cnt_name name!"
