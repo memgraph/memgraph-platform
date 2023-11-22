@@ -11,28 +11,24 @@ print_help() {
   echo -e "  MGPLAT_GHA_PAT_TOKEN -> Github PAT token to download Lab's NPM package"
   echo -e ""
   echo -e "How to run?"
-  echo -e "  $0 [-h|build src_package_path image_name]"
+  echo -e "  $0 [-h|build src_package_path image_name target_arch]"
   exit 1
 }
 
 # TODO(gitbuda): An option to build wihout mage.
 build() {
-  src_package="$1"
-  image_name="$2"
-  package_file="$(basename $src_package)"
-  platform_package_file="memgraph-${package_file#memgraph_}"
-  package_file_name="${package_file%.*}"
-  target_arch="${package_file_name#memgraph_}"
-  arch_suffix="${target_arch##*_}"
-  cp "$src_package" \
-     "$MGPLAT_ROOT/$platform_package_file"
-  cd "$MGPLAT_ROOT"
-  docker buildx build --platform="linux/$arch_suffix" -t ${image_name} \
-    --build-arg TARGETARCH="$target_arch" \
+  src_package=$1
+  image_name=$2
+  target_arch=$3
+  platform_package_file="memgraph-$target_arch.deb"
+  cp $src_package \
+     $MGPLAT_ROOT/$platform_package_file
+  cd $MGPLAT_ROOT
+  docker buildx build --platform="linux/$target_arch" -t ${image_name} \
     --build-arg NPM_PACKAGE_TOKEN="${MGPLAT_GHA_PAT_TOKEN}" \
     -f Dockerfile .
   mkdir -p "$DIR/dist/docker"
-  docker save ${image_name} | gzip -f > "$DIR/dist/docker/${image_name}.tar.gz"
+  docker save $image_name | gzip -f > "$DIR/dist/docker/$image_name.tar.gz"
 }
 
 if [ "$#" == 0 ]; then
@@ -40,10 +36,10 @@ if [ "$#" == 0 ]; then
 else
   case "$1" in
     build)
-      if [ "$#" -ne 3 ]; then
+      if [ "$#" -ne 4 ]; then
         print_help
       fi
-      build "$2" "$3"
+      build $2 $3 $4
     ;;
     *)
       print_help
