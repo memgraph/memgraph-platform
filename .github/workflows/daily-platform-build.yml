@@ -124,6 +124,7 @@ jobs:
         run: |
           cd scripts 
           ./pack_memgraph_via_docker.sh pack
+          ./pack_memgraph_via_docker.sh copy_package
           ./pack_memgraph_via_docker.sh cleanup
           mv dist/package/memgraph*.deb dist/package/memgraph.deb
         env:

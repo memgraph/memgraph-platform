@@ -9,6 +9,7 @@ MGPLAT_CNT_MG_ROOT="${MGPLAT_CNT_MG_ROOT:-/platform/mage/cpp/memgraph}"
 MGPLAT_MG_TAG="${MGPLAT_MG_TAG:-master}"
 MGPLAT_MG_BUILD_TYPE="${MGPLAT_MG_BUILD_TYPE:-RelWithDebInfo}"
 MGPLAT_DIST_BINARY="$DIR/dist/binary"
+MGPLAT_DIST_PACKAGE="$DIR/dist/package"
 print_help() {
   echo -e "Builds memgraph binary and package via Docker build container."
   echo -e ""
@@ -20,7 +21,7 @@ print_help() {
   echo -e "  MGPLAT_MG_BUILD_TYPE -> Debug|Release|RelWithDebInfo"
   echo -e ""
   echo -e "How to run?"
-  echo -e "  $0 [pack|cleanup|copy_binary]"
+  echo -e "  $0 [pack|cleanup|copy_binary|copy_package]"
   exit 1
 }
 
@@ -33,8 +34,6 @@ docker_run () {
           docker rm "$cnt_name"
       fi
       docker run -d \
-        -v "$DIR/..:/platform" \
-        -v "$DIR/dist/package:$MGPLAT_CNT_MG_ROOT/build/output" \
         --network host --name "$cnt_name" "$cnt_image"
   fi
   echo "The $cnt_image container is active under $cnt_name name!"
@@ -70,6 +69,11 @@ cleanup() {
   docker_stop_rm $MGPLAT_CNT_NAME
 }
 
+copy_package() {
+  src_cnt_package_path="$MGPLAT_CNT_NAME:$MGPLAT_CNT_MG_ROOT/build/output/."
+  docker cp $src_cnt_package_path $MGPLAT_DIST_PACKAGE
+}
+
 copy_binary() {
   cnt_cmd="echo \$(readlink $MGPLAT_CNT_MG_ROOT/build/memgraph)"
   cnt_binary_path=$(docker exec "$MGPLAT_CNT_NAME" bash -c "$cnt_cmd")
@@ -93,6 +97,9 @@ else
     # Debian 10 binary to run under Jepsen
     copy_binary)
       copy_binary
+    ;;
+    copy_package)
+      copy_package
     ;;
     *)
       print_help
