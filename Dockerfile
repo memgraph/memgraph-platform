@@ -117,7 +117,8 @@ COPY --from=mage-dev /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${
 
 COPY memgraph-${TARGETARCH}.deb .
 
-RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb
+RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb && rm /usr/lib/memgraph/query_modules/schema.so  \
+&& rm /usr/lib/memgraph/query_modules/example_cpp.so
 
 RUN rm -rf /mage \
     && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" \
