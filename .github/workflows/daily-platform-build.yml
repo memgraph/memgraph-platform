@@ -74,12 +74,12 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: memgraph_${{ env.TARGET_OS }}.deb
-          path: ${{ env.MG_BINARY_PATH }}
+          path: ${{ env.MG_BINARY_TARGET_PATH }}
 
       - name: "Build Mage"
         run: |
           cd scripts 
-          ./docker_image_mage.sh build ${{ env.MG_BINARY_PATH }} mage_${{ env.ARCHITECTURE }} ${{ env.ARCHITECTURE }}
+          ./docker_image_mage.sh build ${{ env.MG_BINARY_TARGET_PATH }} mage_${{ env.ARCHITECTURE }} ${{ env.ARCHITECTURE }}
 
       - name: "Upload mage docker image"
         uses: actions/upload-artifact@v3
@@ -90,7 +90,7 @@ jobs:
       - name: "Build memgraph platform"
         run: |
           cd scripts 
-          ./docker_image_platform ${{ env.MG_BINARY_PATH }} memgraph-platform_${{ env.ARCHITECTURE }} ${{ env.ARCHITECTURE }}
+          ./docker_image_platform ${{ env.MG_BINARY_TARGET_PATH }} memgraph-platform_${{ env.ARCHITECTURE }} ${{ env.ARCHITECTURE }}
         env:
           MGPLAT_GHA_PAT_TOKEN: ${{ secrets.PAT }}
 
@@ -137,12 +137,12 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: memgraph_${{ env.TARGET_OS }}.deb
-          path: ${{ env.MG_BINARY_PATH }}
+          path: ${{ env.MG_BINARY_TARGET_PATH }}
 
       - name: "Build Mage"
         run: |
           cd scripts 
-          ./docker_image_mage.sh build ${{ env.MG_BINARY_PATH }} mage_${{ env.ARCHITECTURE }} ${{ env.ARCHITECTURE }}
+          ./docker_image_mage.sh build ${{ env.MG_BINARY_TARGET_PATH }} mage_${{ env.ARCHITECTURE }} ${{ env.ARCHITECTURE }}
 
       - name: "Upload mage docker image"
         uses: actions/upload-artifact@v3
@@ -153,7 +153,7 @@ jobs:
       - name: "Build memgraph platform"
         run: |
           cd scripts 
-          ./docker_image_platform ${{ env.MG_BINARY_PATH }} memgraph-platform_${{ env.ARCHITECTURE }} ${{ env.ARCHITECTURE }}
+          ./docker_image_platform ${{ env.MG_BINARY_TARGET_PATH }} memgraph-platform_${{ env.ARCHITECTURE }} ${{ env.ARCHITECTURE }}
         env:
           MGPLAT_GHA_PAT_TOKEN: ${{ secrets.PAT }}
 
