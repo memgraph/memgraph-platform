@@ -79,7 +79,7 @@ jobs:
       - name: "Build Mage"
         run: |
           cd scripts 
-          ./docker_image_mage.sh build ${{ env.MG_BINARY_PATH }} mage_${{ env.ARCHITECTURE } ${{ env.ARCHITECTURE }}
+          ./docker_image_mage.sh build ${{ env.MG_BINARY_PATH }} mage_${{ env.ARCHITECTURE }} ${{ env.ARCHITECTURE }}
 
       - name: "Upload mage docker image"
         uses: actions/upload-artifact@v3
@@ -142,7 +142,7 @@ jobs:
       - name: "Build Mage"
         run: |
           cd scripts 
-          ./docker_image_mage.sh build ${{ env.MG_BINARY_PATH }} mage_${{ env.ARCHITECTURE } ${{ env.ARCHITECTURE }}
+          ./docker_image_mage.sh build ${{ env.MG_BINARY_PATH }} mage_${{ env.ARCHITECTURE }} ${{ env.ARCHITECTURE }}
 
       - name: "Upload mage docker image"
         uses: actions/upload-artifact@v3
