@@ -31,7 +31,7 @@ on:
 
 env:
   TOOLCHAIN_VERSION: ${{ github.events.inputs.toolchain_version || 'v4' }}
-  MG_BINARY_TARGET_PATH: "scripts/dist/binary/memgraph"
+  MG_PACKAGE_TARGET_PATH: "scripts/dist/binary/memgraph.deb"
   MEMGRAPH_TAG: ${{ github.event.inputs.memgraph_tag || 'master' }}
   MAGE_TAG: ${{ github.event.inputs.mage_tag || 'main' }}
   LAB_TAG: ${{ github.event.inputs.lab_tag || 'dev' }}
@@ -61,8 +61,8 @@ jobs:
         run: |
           cd scripts 
           ./pack_memgraph_via_docker.sh pack
-          ./pack_memgraph_via_docker.sh copy_binary
           ./pack_memgraph_via_docker.sh cleanup
+          mv dist/pacakge/memgraph*.deb dist/pacakge/memgraph.deb
         env:
           MGPLAT_CNT_IMAGE: "memgraph/memgraph-builder:${{ env.TOOLCHAIN_VERSION }}_${{ env.TARGET_OS }}"
           MGPLAT_CNT_NAME: "mgbuilder_${{ env.TARGET_OS }}"
@@ -74,12 +74,12 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: memgraph_${{ env.TARGET_OS }}.deb
-          path: ${{ env.MG_BINARY_TARGET_PATH }}
+          path: ${{ env.MG_PACKAGE_TARGET_PATH }}
 
       - name: "Build Mage"
         run: |
           cd scripts 
-          ./docker_image_mage.sh build ${{ env.MG_BINARY_TARGET_PATH }} mage_${{ env.ARCHITECTURE }} ${{ env.ARCHITECTURE }}
+          ./docker_image_mage.sh build ${{ env.MG_PACKAGE_TARGET_PATH }} mage_${{ env.ARCHITECTURE }} ${{ env.ARCHITECTURE }}
 
       - name: "Upload mage docker image"
         uses: actions/upload-artifact@v3
@@ -90,7 +90,7 @@ jobs:
       - name: "Build memgraph platform"
         run: |
           cd scripts 
-          ./docker_image_platform ${{ env.MG_BINARY_TARGET_PATH }} memgraph-platform_${{ env.ARCHITECTURE }} ${{ env.ARCHITECTURE }}
+          ./docker_image_platform ${{ env.MG_PACKAGE_TARGET_PATH }} memgraph-platform_${{ env.ARCHITECTURE }} ${{ env.ARCHITECTURE }}
         env:
           MGPLAT_GHA_PAT_TOKEN: ${{ secrets.PAT }}
 
@@ -124,8 +124,8 @@ jobs:
         run: |
           cd scripts 
           ./pack_memgraph_via_docker.sh pack
-          ./pack_memgraph_via_docker.sh copy_binary
           ./pack_memgraph_via_docker.sh cleanup
+          mv dist/pacakge/memgraph*.deb dist/pacakge/memgraph.deb
         env:
           MGPLAT_CNT_IMAGE: "memgraph/memgraph-builder:${{ env.TOOLCHAIN_VERSION }}_${{ env.TARGET_OS }}"
           MGPLAT_CNT_NAME: "mgbuilder_${{ env.TARGET_OS }}"
@@ -137,12 +137,12 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: memgraph_${{ env.TARGET_OS }}.deb
-          path: ${{ env.MG_BINARY_TARGET_PATH }}
+          path: ${{ env.MG_PACKAGE_TARGET_PATH }}
 
       - name: "Build Mage"
         run: |
           cd scripts 
-          ./docker_image_mage.sh build ${{ env.MG_BINARY_TARGET_PATH }} mage_${{ env.ARCHITECTURE }} ${{ env.ARCHITECTURE }}
+          ./docker_image_mage.sh build ${{ env.MG_PACKAGE_TARGET_PATH }} mage_${{ env.ARCHITECTURE }} ${{ env.ARCHITECTURE }}
 
       - name: "Upload mage docker image"
         uses: actions/upload-artifact@v3
@@ -153,7 +153,7 @@ jobs:
       - name: "Build memgraph platform"
         run: |
           cd scripts 
-          ./docker_image_platform ${{ env.MG_BINARY_TARGET_PATH }} memgraph-platform_${{ env.ARCHITECTURE }} ${{ env.ARCHITECTURE }}
+          ./docker_image_platform ${{ env.MG_PACKAGE_TARGET_PATH }} memgraph-platform_${{ env.ARCHITECTURE }} ${{ env.ARCHITECTURE }}
         env:
           MGPLAT_GHA_PAT_TOKEN: ${{ secrets.PAT }}
 
