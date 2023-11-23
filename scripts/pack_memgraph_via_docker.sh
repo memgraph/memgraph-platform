@@ -35,6 +35,7 @@ docker_run () {
       fi
       docker run -d \
         -v "$DIR/..:/platform" \
+        -v "$DIR/dist/package:$MGPLAT_CNT_MG_ROOT/build/output" \
         --network host --name "$cnt_name" "$cnt_image"
   fi
   echo "The $cnt_image container is active under $cnt_name name!"
