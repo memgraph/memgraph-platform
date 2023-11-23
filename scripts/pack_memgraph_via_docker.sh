@@ -55,6 +55,7 @@ build_pack() {
   # shellcheck disable=SC1091
   source build_memgraph_native.sh
   mkdir -p dist/binary
+  mkdir -p dist/package
   docker_run "$MGPLAT_CNT_NAME" "$MGPLAT_CNT_IMAGE"
   docker cp "$DIR/build_memgraph_native.sh" "$MGPLAT_CNT_NAME:/"
   docker_exec "git config --global --add safe.directory $MGPLAT_CNT_MG_ROOT"
