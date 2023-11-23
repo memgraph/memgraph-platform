@@ -70,8 +70,6 @@ jobs:
     name: "Build memgraph plaftorm"
     needs: [build_memgraph]
     runs-on: [self-hosted, Docker, X64]
-    env:
-      DOCKER_IMAGE_NAME: "memgraph-platform_${{ env.ARCHITECTURE }}"
     steps:
       - name: "Checkout repository and submodules"
         uses: actions/checkout@v3
@@ -96,7 +94,7 @@ jobs:
         run: |
           ./scripts/docker_image_platform.sh build \
           memgraph_${{ env.TARGET_OS }}.deb \
-          ${{ env.DOCKER_IMAGE_NAME }} \
+          memgraph-platform_${{ env.ARCHITECTURE }} \
           ${{ env.ARCHITECTURE }}
         env:
           MGPLAT_GHA_PAT_TOKEN: ${{ secrets.PAT }}
@@ -105,14 +103,12 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: memgraph-platform_${{ env.ARCHITECTURE }}.tar.gz
-          path: scripts/dist/docker/${{ env.DOCKER_IMAGE_NAME }}.tar.gz
+          path: scripts/dist/docker/memgraph-platform_${{ env.ARCHITECTURE }}.tar.gz
 
   build_memgraph_platform_without mage:
     name: "Build memgraph plaftorm without mage"
     needs: [build_memgraph]
     runs-on: [self-hosted, Docker, X64]
-    env:
-      DOCKER_IMAGE_NAME: "memgraph-platform_${{ env.ARCHITECTURE }}"
     steps:
       - name: "Checkout repository and submodules"
         uses: actions/checkout@v3
@@ -135,7 +131,7 @@ jobs:
         run: |
           ./scripts/docker_image_platform.sh build \
           memgraph_${{ env.TARGET_OS }}.deb \
-          ${{ env.DOCKER_IMAGE_NAME }} \
+          memgraph-platform_${{ env.ARCHITECTURE }} \
           ${{ env.ARCHITECTURE }} \
           --no-mage
         env:
@@ -145,14 +141,12 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: memgraph-platform-no-mage_${{ env.ARCHITECTURE }}.tar.gz
-          path: scripts/dist/docker/${{ DOCKER_IMAGE_NAME }}.tar.gz
+          path: scripts/dist/docker/memgraph-platform_${{ env.ARCHITECTURE }}.tar.gz
 
   build_mage:
     name: "Build mage"
     needs: [build_memgraph]
     runs-on: [self-hosted, Docker, X64]
-    env:
-      DOCKER_IMAGE_NAME: "mage_${{ env.ARCHITECTURE }}"
     steps:
       - name: "Checkout repository and submodules"
         uses: actions/checkout@v3
@@ -175,12 +169,12 @@ jobs:
       - name: "Build Mage"
         run: |
           ./scripts/docker_image_mage.sh build \
+          mage_${{ env.ARCHITECTURE }} \
           memgraph_${{ env.TARGET_OS }}.deb \
-          ${{ env.DOCKER_IMAGE_NAME }} \
           ${{ env.ARCHITECTURE }}
 
       - name: "Upload mage docker image"
         uses: actions/upload-artifact@v3
         with:
           name: mage_${{ env.ARCHITECTURE }}.tar.gz
-          path: scripts/dist/docker/${{ env.DOCKER_IMAGE_NAME }}.tar.gz
+          path: scripts/dist/docker/mage_${{ env.ARCHITECTURE }}.tar.gz
