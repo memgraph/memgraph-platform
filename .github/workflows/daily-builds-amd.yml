@@ -105,7 +105,7 @@ jobs:
           name: memgraph-platform_${{ env.ARCHITECTURE }}.tar.gz
           path: scripts/dist/docker/memgraph-platform_${{ env.ARCHITECTURE }}.tar.gz
 
-  build_memgraph_platform_without mage:
+  build_memgraph_platform_without_mage:
     name: "Build memgraph plaftorm without mage"
     needs: [build_memgraph]
     runs-on: [self-hosted, Docker, X64]
