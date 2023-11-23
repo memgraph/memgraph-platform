@@ -84,14 +84,14 @@ jobs:
           git checkout ${{ env.MAGE_TAG }} && cd ..
           cd lab && git checkout ${{ env.LAB_TAG }} && cd ..
 
-      - name: Download artifacts
+      - name: "Download memgraph package"
         uses: actions/download-artifact@v3
         with:
           name: memgraph_${{ env.TARGET_OS }}.deb
-          path: ./memgraph_${{ env.TARGET_OS }}.deb
 
       - name: "Build memgraph platform"
         run: |
+          mv memgraph_*.deb memgraph_${{ env.TARGET_OS }}.deb
           ./scripts/docker_image_platform.sh build \
           memgraph_${{ env.TARGET_OS }}.deb \
           memgraph-platform_${{ env.ARCHITECTURE }} \
@@ -121,14 +121,14 @@ jobs:
         run: |
           cd lab && git checkout ${{ env.LAB_TAG }} && cd ..
 
-      - name: Download artifacts
+      - name: "Download memgraph package"
         uses: actions/download-artifact@v3
         with:
           name: memgraph_${{ env.TARGET_OS }}.deb
-          path: ./memgraph_${{ env.TARGET_OS }}.deb
 
       - name: "Build memgraph platform"
         run: |
+          mv memgraph_*.deb memgraph_${{ env.TARGET_OS }}.deb
           ./scripts/docker_image_platform.sh build \
           memgraph_${{ env.TARGET_OS }}.deb \
           memgraph-platform_${{ env.ARCHITECTURE }} \
@@ -160,14 +160,14 @@ jobs:
           cd mage && git checkout ${{ env.MAGE_TAG }}
           cd cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }}
 
-      - name: Download artifacts
+      - name: "Download memgraph package"
         uses: actions/download-artifact@v3
         with:
           name: memgraph_${{ env.TARGET_OS }}.deb
-          path: ./memgraph_${{ env.TARGET_OS }}.deb
 
       - name: "Build Mage"
         run: |
+          mv memgraph_*.deb memgraph_${{ env.TARGET_OS }}.deb
           ./scripts/docker_image_mage.sh build \
           mage_${{ env.ARCHITECTURE }} \
           memgraph_${{ env.TARGET_OS }}.deb \
