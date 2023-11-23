@@ -31,14 +31,14 @@ on:
 
 env:
   TOOLCHAIN_VERSION: ${{ github.events.inputs.toolchain_version || 'v4' }}
-  MG_PACKAGE_TARGET_PATH: "scripts/dist/binary/memgraph.deb"
+  MG_PACKAGE_TARGET_PATH: "scripts/dist/package/memgraph.deb"
   MEMGRAPH_TAG: ${{ github.event.inputs.memgraph_tag || 'master' }}
   MAGE_TAG: ${{ github.event.inputs.mage_tag || 'main' }}
   LAB_TAG: ${{ github.event.inputs.lab_tag || 'dev' }}
 
 jobs:
   build_amd64:
-    name: "Build memgraph plaftorm amd64"
+    name: "Build memgraph plaftorm for amd64"
     runs-on: [self-hosted, Docker, X64]
     env:
       ARCHITECTURE: "amd64"
@@ -61,6 +61,7 @@ jobs:
         run: |
           cd scripts 
           ./pack_memgraph_via_docker.sh pack
+          ./pack_memgraph_via_docker.sh copy_package
           ./pack_memgraph_via_docker.sh cleanup
           mv dist/package/memgraph*.deb dist/package/memgraph.deb
         env:
@@ -101,7 +102,7 @@ jobs:
           path: scripts/dist/docker/memgraph-platform_${{ env.ARCHITECTURE }}.tar.gz
 
   build_arm64:
-    name: "Build memgraph plaftorm arm64"
+    name: "Build memgraph plaftorm for arm64"
     runs-on: [self-hosted, DockerMgBuild, ARM64, strange]
     env:
       ARCHITECTURE: "arm64"
