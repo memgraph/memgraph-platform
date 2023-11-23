@@ -88,7 +88,7 @@ jobs:
 
       - name: "Build memgraph platform"
         run: |
-          ./scripts/docker_image_platform ${{ env.MG_PACKAGE_TARGET_PATH }} memgraph-platform_${{ env.ARCHITECTURE }} ${{ env.ARCHITECTURE }}
+          ./scripts/docker_image_platform.sh ${{ env.MG_PACKAGE_TARGET_PATH }} memgraph-platform_${{ env.ARCHITECTURE }} ${{ env.ARCHITECTURE }}
         env:
           MGPLAT_GHA_PAT_TOKEN: ${{ secrets.PAT }}
 
@@ -149,7 +149,7 @@ jobs:
 
       - name: "Build memgraph platform"
         run: |
-          ./scripts/docker_image_platform ${{ env.MG_PACKAGE_TARGET_PATH }} memgraph-platform_${{ env.ARCHITECTURE }} ${{ env.ARCHITECTURE }}
+          ./scripts/docker_image_platform.sh ${{ env.MG_PACKAGE_TARGET_PATH }} memgraph-platform_${{ env.ARCHITECTURE }} ${{ env.ARCHITECTURE }}
         env:
           MGPLAT_GHA_PAT_TOKEN: ${{ secrets.PAT }}
 
