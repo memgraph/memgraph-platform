@@ -11,7 +11,7 @@ print_help() {
   echo -e "  MGPLAT_GHA_PAT_TOKEN -> Github PAT token to download Lab's NPM package"
   echo -e ""
   echo -e "How to run?"
-  echo -e "  $0 [-h|build src_package_path image_name target_arch]"
+  echo -e "  $0 [-h|build src_package_path image_name target_arch [--no-mage]]"
   exit 1
 }
 
@@ -24,9 +24,19 @@ build() {
   cp $src_package \
      $MGPLAT_ROOT/$platform_package_file
   cd $MGPLAT_ROOT
-  docker buildx build --platform="linux/$target_arch" -t ${image_name} \
-    --build-arg NPM_PACKAGE_TOKEN="${MGPLAT_GHA_PAT_TOKEN}" \
-    -f Dockerfile .
+  if [ "$#" -eq 5 ]; then
+    if [[ "$4" == "--no-mage" ]]; then
+      docker buildx build --platform="linux/$target_arch" -t ${image_name} \
+        --build-arg NPM_PACKAGE_TOKEN="${MGPLAT_GHA_PAT_TOKEN}" \
+        -f memgraph_and_lab.Dockerfile .
+    else
+      print_help
+    fi
+  else
+    docker buildx build --platform="linux/$target_arch" -t ${image_name} \
+      --build-arg NPM_PACKAGE_TOKEN="${MGPLAT_GHA_PAT_TOKEN}" \
+      -f Dockerfile .
+  fi
   mkdir -p "$DIR/dist/docker"
   docker save $image_name | gzip -f > "$DIR/dist/docker/$image_name.tar.gz"
 }
@@ -36,7 +46,7 @@ if [ "$#" == 0 ]; then
 else
   case "$1" in
     build)
-      if [ "$#" -ne 4 ]; then
+      if [ "$#" -lt 4 || "$#" -gt 5 ]; then
         print_help
       fi
       build $2 $3 $4
