@@ -1,0 +1,186 @@
+name: Daily builds for amd64
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        type: choice
+        description: "Build type"
+        default: 'ReleaseWithDebug'
+        options:
+          - Release
+          - ReleaseWithDebug
+          - Debug
+      toolchain_version:
+        type: choice
+        description: "Toolchain version"
+        default: 'v4'
+        options:
+          - v4
+          - v5
+      memgraph_tag:
+        description: "Memgraph version (choose master to use the latest source)"
+        default: 'master'
+      mage_tag:
+        description: "Mage version (choose main to use the latest source)"
+        default: 'main'
+      lab_tag:
+        description: "Lab version (choose dev to use the latest source)"
+        default: 'dev'
+
+env:
+  ARCHITECTURE: "amd64"
+  LAB_TAG: ${{ github.event.inputs.lab_tag || 'dev' }}
+  MAGE_TAG: ${{ github.event.inputs.mage_tag || 'main' }}
+  MEMGRAPH_TAG: ${{ github.event.inputs.memgraph_tag || 'master' }}
+  TARGET_OS: "debian-11"
+  TOOLCHAIN_VERSION: ${{ github.events.inputs.toolchain_version || 'v4' }}
+
+jobs:
+  build_memgraph:
+    name: "Build memgraph"
+    runs-on: [self-hosted, Docker, X64]
+    steps:
+      - name: "Checkout repository and submodules"
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.PAT }}
+
+      - name: "Build memgraph"
+        run: |
+          ./scripts/pack_memgraph_via_docker.sh pack
+          ./scripts/pack_memgraph_via_docker.sh cleanup
+        env:
+          MGPLAT_CNT_IMAGE: "memgraph/memgraph-builder:${{ env.TOOLCHAIN_VERSION }}_${{ env.TARGET_OS }}"
+          MGPLAT_CNT_NAME: "mgbuilder_${{ env.TARGET_OS }}"
+          MGPLAT_CNT_MG_ROOT: "/platform/mage/cpp/memgraph"
+          MGPLAT_MG_TAG: ${{ env.MEMGRAPH_TAG }}
+          MGPLAT_MG_BUILD_TYPE: ${{ github.event.inputs.build_type || 'Release' }}
+
+      - name: "Upload memgraph binary"
+        uses: actions/upload-artifact@v3
+        with:
+          name: memgraph_${{ env.TARGET_OS }}.deb
+          path: scripts/dist/package/memgraph*.deb
+
+  build_memgraph_platform:
+    name: "Build memgraph plaftorm"
+    needs: [build_memgraph]
+    runs-on: [self-hosted, Docker, X64]
+    env:
+      DOCKER_IMAGE_NAME: "memgraph-platform_${{ env.ARCHITECTURE }}"
+    steps:
+      - name: "Checkout repository and submodules"
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.PAT }}
+
+      - name: "Checkout correct versions in submodules"
+        run: |
+          cd mage/cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }} && cd ../..
+          git checkout ${{ env.MAGE_TAG }} && cd ..
+          cd lab && git checkout ${{ env.LAB_TAG }} && cd ..
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: memgraph_${{ env.TARGET_OS }}.deb
+          path: .
+
+      - name: "Build memgraph platform"
+        run: |
+          ./scripts/docker_image_platform.sh build \
+          memgraph_${{ env.TARGET_OS }}.deb \
+          ${{ env.DOCKER_IMAGE_NAME }} \
+          ${{ env.ARCHITECTURE }}
+        env:
+          MGPLAT_GHA_PAT_TOKEN: ${{ secrets.PAT }}
+
+      - name: "Upload memgraph platform docker image"
+        uses: actions/upload-artifact@v3
+        with:
+          name: memgraph-platform_${{ env.ARCHITECTURE }}.tar.gz
+          path: scripts/dist/docker/${{ env.DOCKER_IMAGE_NAME }}.tar.gz
+
+  build_memgraph_platform_without mage:
+    name: "Build memgraph plaftorm without mage"
+    needs: [build_memgraph]
+    runs-on: [self-hosted, Docker, X64]
+    env:
+      DOCKER_IMAGE_NAME: "memgraph-platform_${{ env.ARCHITECTURE }}"
+    steps:
+      - name: "Checkout repository and submodules"
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.PAT }}
+
+      - name: "Checkout correct versions in submodules"
+        run: |
+          cd lab && git checkout ${{ env.LAB_TAG }} && cd ..
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: memgraph_${{ env.TARGET_OS }}.deb
+          path: .
+
+      - name: "Build memgraph platform"
+        run: |
+          ./scripts/docker_image_platform.sh build \
+          memgraph_${{ env.TARGET_OS }}.deb \
+          ${{ env.DOCKER_IMAGE_NAME }} \
+          ${{ env.ARCHITECTURE }} \
+          --no-mage
+        env:
+          MGPLAT_GHA_PAT_TOKEN: ${{ secrets.PAT }}
+
+      - name: "Upload memgraph platform docker image"
+        uses: actions/upload-artifact@v3
+        with:
+          name: memgraph-platform-no-mage_${{ env.ARCHITECTURE }}.tar.gz
+          path: scripts/dist/docker/${{ DOCKER_IMAGE_NAME }}.tar.gz
+
+  build_mage:
+    name: "Build mage"
+    needs: [build_memgraph]
+    runs-on: [self-hosted, Docker, X64]
+    env:
+      DOCKER_IMAGE_NAME: "mage_${{ env.ARCHITECTURE }}"
+    steps:
+      - name: "Checkout repository and submodules"
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.PAT }}
+
+      - name: "Checkout correct versions in submodules"
+        run: |
+          cd mage && git checkout ${{ env.MAGE_TAG }}
+          cd cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }}
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: memgraph_${{ env.TARGET_OS }}.deb
+          path: .
+
+      - name: "Build Mage"
+        run: |
+          ./scripts/docker_image_mage.sh build \
+          memgraph_${{ env.TARGET_OS }}.deb \
+          ${{ env.DOCKER_IMAGE_NAME }} \
+          ${{ env.ARCHITECTURE }}
+
+      - name: "Upload mage docker image"
+        uses: actions/upload-artifact@v3
+        with:
+          name: mage_${{ env.ARCHITECTURE }}.tar.gz
+          path: scripts/dist/docker/${{ env.DOCKER_IMAGE_NAME }}.tar.gz
