@@ -6,6 +6,7 @@ DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 MGPLAT_CNT_IMAGE="${MGPLAT_CNT_IMAGE:-memgraph/memgraph-builder:v4_debian-11}"
 MGPLAT_CNT_NAME="${MGPLAT_CNT_NAME:-mgbuild_builder}"
 MGPLAT_CNT_MG_ROOT="${MGPLAT_CNT_MG_ROOT:-/platform/mage/cpp/memgraph}"
+MGPLAT_CNT_OUTPUT_DIR="/memgraph/build/output"
 MGPLAT_MG_TAG="${MGPLAT_MG_TAG:-master}"
 MGPLAT_MG_BUILD_TYPE="${MGPLAT_MG_BUILD_TYPE:-RelWithDebInfo}"
 MGPLAT_DIST_BINARY="$DIR/dist/binary"
@@ -33,10 +34,9 @@ docker_run () {
           echo "Cleanup of the old exited container..."
           docker rm "$cnt_name"
       fi
-      docker run -d \
-        -v "$DIR/..:/platform" \
-        -v "$DIR/dist/package:$MGPLAT_CNT_MG_ROOT/build/output" \
-        --network host --name "$cnt_name" "$cnt_image"
+      docker run -d --network host --name "$cnt_name" "$cnt_image"
+        # -v "$DIR/..:/platform" \
+        # -v "$DIR/dist/package:$MGPLAT_CNT_MG_ROOT/build/output" \
   fi
   echo "The $cnt_image container is active under $cnt_name name!"
 }
@@ -55,36 +55,35 @@ build_pack() {
   cd "$DIR"
   # shellcheck disable=SC1091
   source build_memgraph_native.sh
-  mkdir -p dist/binary
-  mkdir -p dist/package
   docker_run "$MGPLAT_CNT_NAME" "$MGPLAT_CNT_IMAGE"
+  docker cp "$MGPLAT_CNT_MG_ROOT" "$MGPLAT_CNT_NAME:/"
   docker cp "$DIR/build_memgraph_native.sh" "$MGPLAT_CNT_NAME:/"
-  docker_exec "git config --global --add safe.directory $MGPLAT_CNT_MG_ROOT"
-  mg_root="MGPLAT_MG_ROOT=$MGPLAT_CNT_MG_ROOT"
+  docker_exec "git config --global --add safe.directory /memgraph"
+  mg_root="MGPLAT_MG_ROOT=/memgraph"
   mg_tag="MGPLAT_MG_TAG=$MGPLAT_MG_TAG"
   mg_build_type="MGPLAT_MG_BUILD_TYPE=$MGPLAT_MG_BUILD_TYPE"
   docker_exec "$mg_root $mg_build_type $mg_tag /build_memgraph_native.sh build"
 }
 
 cleanup() {
-  # docker_exec "rm -rf $MGPLAT_CNT_MG_ROOT/build/*"
-  # docker_exec "$MGPLAT_CNT_MG_ROOT/libs/cleanup.sh"
   docker_stop_rm $MGPLAT_CNT_NAME
-  # NOTE: Run cleanup as root or with sudo; sudo ./pack_memgraph_via_docker.sh cleanup
-  rm -rf "$DIR/dist/package/*"
 }
 
 copy_package() {
-  src_cnt_package_path="$MGPLAT_CNT_NAME:$MGPLAT_CNT_MG_ROOT/build/output/."
-  docker cp $src_cnt_package_path $MGPLAT_DIST_PACKAGE
+  mkdir -p $MGPLAT_DIST_PACKAGE
+  last_package_name=$(docker exec "$MGPLAT_CNT_NAME" bash -c "cd $MGPLAT_CNT_OUTPUT_DIR && ls -t memgraph* | head -1")
+  package_host_destination="$MGPLAT_DIST_PACKAGE/$last_package_name"
+  docker cp "$MGPLAT_CNT_NAME:$MGPLAT_CNT_OUTPUT_DIR/$last_package_name" "$package_host_destination"
+  echo "Package $last_package_name saved to $package_host_destination."
 }
 
 copy_binary() {
+  mkdir -p $MGPLAT_DIST_BINARY
   cnt_cmd="echo \$(readlink $MGPLAT_CNT_MG_ROOT/build/memgraph)"
   cnt_binary_path=$(docker exec "$MGPLAT_CNT_NAME" bash -c "$cnt_cmd")
   binary_name="$(basename $cnt_binary_path)"
   src_cnt_binary_path="$MGPLAT_CNT_NAME:$cnt_binary_path"
-  docker cp -L "$src_cnt_binary_path" "$DIR/dist/binary/"
+  docker cp -L "$src_cnt_binary_path" "$MGPLAT_DIST_BINARY"
 }
 
 if [ "$#" == 0 ]; then
