@@ -65,84 +65,84 @@ jobs:
         with:
           name: memgraph_${{ env.TARGET_OS }}.deb
           path: scripts/dist/package/memgraph*.deb
-
-  build_memgraph_platform:
-    name: "Build memgraph plaftorm"
-    needs: [build_memgraph]
-    runs-on: [self-hosted, Docker, X64]
-    steps:
-      - name: "Checkout repository and submodules"
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          submodules: recursive
-          token: ${{ secrets.PAT }}
-
-      - name: "Checkout correct versions in submodules"
-        run: |
-          cd lab && git checkout ${{ env.LAB_TAG }}
-          cd ../mage && git checkout ${{ env.MAGE_TAG }}
-          cd cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }}
-
-      - name: "Download memgraph package"
-        uses: actions/download-artifact@v3
-        with:
-          name: memgraph_${{ env.TARGET_OS }}.deb
-
-      - name: "Build memgraph platform"
-        run: |
-          mv memgraph_*.deb memgraph_${{ env.TARGET_OS }}.deb
-          ./scripts/docker_image_platform.sh build \
-          memgraph_${{ env.TARGET_OS }}.deb \
-          memgraph-platform_${{ env.ARCHITECTURE }} \
-          ${{ env.ARCHITECTURE }}
-        env:
-          MGPLAT_GHA_PAT_TOKEN: ${{ secrets.PAT }}
-
-      - name: "Upload memgraph platform docker image"
-        uses: actions/upload-artifact@v3
-        with:
-          name: memgraph-platform_${{ env.ARCHITECTURE }}.tar.gz
-          path: scripts/dist/docker/memgraph-platform_${{ env.ARCHITECTURE }}.tar.gz
-
-  build_memgraph_platform_without_mage:
-    name: "Build memgraph plaftorm without mage"
-    needs: [build_memgraph]
-    runs-on: [self-hosted, Docker, X64]
-    steps:
-      - name: "Checkout repository and submodules"
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          submodules: recursive
-          token: ${{ secrets.PAT }}
-
-      - name: "Checkout correct versions in submodules"
-        run: |
-          cd lab && git checkout ${{ env.LAB_TAG }}
-
-      - name: "Download memgraph package"
-        uses: actions/download-artifact@v3
-        with:
-          name: memgraph_${{ env.TARGET_OS }}.deb
-
-      - name: "Build memgraph platform"
-        run: |
-          mv memgraph_*.deb memgraph_${{ env.TARGET_OS }}.deb
-          ./scripts/docker_image_platform.sh build \
-          memgraph_${{ env.TARGET_OS }}.deb \
-          memgraph-platform_${{ env.ARCHITECTURE }} \
-          ${{ env.ARCHITECTURE }} \
-          --no-mage
-        env:
-          MGPLAT_GHA_PAT_TOKEN: ${{ secrets.PAT }}
-
-      - name: "Upload memgraph platform docker image"
-        uses: actions/upload-artifact@v3
-        with:
-          name: memgraph-platform-no-mage_${{ env.ARCHITECTURE }}.tar.gz
-          path: scripts/dist/docker/memgraph-platform_${{ env.ARCHITECTURE }}.tar.gz
-
+  #
+  # build_memgraph_platform:
+  #   name: "Build memgraph plaftorm"
+  #   needs: [build_memgraph]
+  #   runs-on: [self-hosted, Docker, X64]
+  #   steps:
+  #     - name: "Checkout repository and submodules"
+  #       uses: actions/checkout@v3
+  #       with:
+  #         fetch-depth: 0
+  #         submodules: recursive
+  #         token: ${{ secrets.PAT }}
+  #
+  #     - name: "Checkout correct versions in submodules"
+  #       run: |
+  #         cd lab && git checkout ${{ env.LAB_TAG }}
+  #         cd ../mage && git checkout ${{ env.MAGE_TAG }}
+  #         cd cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }}
+  #
+  #     - name: "Download memgraph package"
+  #       uses: actions/download-artifact@v3
+  #       with:
+  #         name: memgraph_${{ env.TARGET_OS }}.deb
+  #
+  #     - name: "Build memgraph platform"
+  #       run: |
+  #         mv memgraph_*.deb memgraph_${{ env.TARGET_OS }}.deb
+  #         ./scripts/docker_image_platform.sh build \
+  #         memgraph_${{ env.TARGET_OS }}.deb \
+  #         memgraph-platform_${{ env.ARCHITECTURE }} \
+  #         ${{ env.ARCHITECTURE }}
+  #       env:
+  #         MGPLAT_GHA_PAT_TOKEN: ${{ secrets.PAT }}
+  #
+  #     - name: "Upload memgraph platform docker image"
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: memgraph-platform_${{ env.ARCHITECTURE }}.tar.gz
+  #         path: scripts/dist/docker/memgraph-platform_${{ env.ARCHITECTURE }}.tar.gz
+  #
+  # build_memgraph_platform_without_mage:
+  #   name: "Build memgraph plaftorm without mage"
+  #   needs: [build_memgraph]
+  #   runs-on: [self-hosted, Docker, X64]
+  #   steps:
+  #     - name: "Checkout repository and submodules"
+  #       uses: actions/checkout@v3
+  #       with:
+  #         fetch-depth: 0
+  #         submodules: recursive
+  #         token: ${{ secrets.PAT }}
+  #
+  #     - name: "Checkout correct versions in submodules"
+  #       run: |
+  #         cd lab && git checkout ${{ env.LAB_TAG }}
+  #
+  #     - name: "Download memgraph package"
+  #       uses: actions/download-artifact@v3
+  #       with:
+  #         name: memgraph_${{ env.TARGET_OS }}.deb
+  #
+  #     - name: "Build memgraph platform"
+  #       run: |
+  #         mv memgraph_*.deb memgraph_${{ env.TARGET_OS }}.deb
+  #         ./scripts/docker_image_platform.sh build \
+  #         memgraph_${{ env.TARGET_OS }}.deb \
+  #         memgraph-platform_${{ env.ARCHITECTURE }} \
+  #         ${{ env.ARCHITECTURE }} \
+  #         --no-mage
+  #       env:
+  #         MGPLAT_GHA_PAT_TOKEN: ${{ secrets.PAT }}
+  #
+  #     - name: "Upload memgraph platform docker image"
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: memgraph-platform-no-mage_${{ env.ARCHITECTURE }}.tar.gz
+  #         path: scripts/dist/docker/memgraph-platform_${{ env.ARCHITECTURE }}.tar.gz
+  #
   build_mage:
     name: "Build mage"
     needs: [build_memgraph]
@@ -169,8 +169,8 @@ jobs:
         run: |
           mv memgraph_*.deb memgraph_${{ env.TARGET_OS }}.deb
           ./scripts/docker_image_mage.sh build \
-          mage_${{ env.ARCHITECTURE }} \
           memgraph_${{ env.TARGET_OS }}.deb \
+          mage_${{ env.ARCHITECTURE }} \
           ${{ env.ARCHITECTURE }}
 
       - name: "Upload mage docker image"

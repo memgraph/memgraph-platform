@@ -26,17 +26,16 @@ build() {
   cd $MGPLAT_ROOT
   if [ "$#" -eq 5 ]; then
     if [[ "$4" == "--no-mage" ]]; then
-      docker buildx build --platform="linux/$target_arch" -t ${image_name} \
-        --build-arg NPM_PACKAGE_TOKEN="${MGPLAT_GHA_PAT_TOKEN}" \
-        -f memgraph_and_lab.Dockerfile .
+      dockerfile="memgraph_and_lab.Dockerfile"
     else
       print_help
     fi
   else
-    docker buildx build --platform="linux/$target_arch" -t ${image_name} \
-      --build-arg NPM_PACKAGE_TOKEN="${MGPLAT_GHA_PAT_TOKEN}" \
-      -f Dockerfile .
+    dockerfile="Dockerfile"
   fi
+  docker buildx build --platform="linux/$target_arch" -t ${image_name} \
+    --build-arg NPM_PACKAGE_TOKEN="${MGPLAT_GHA_PAT_TOKEN}" \
+    -f ${dockerfile} .
   mkdir -p "$DIR/dist/docker"
   docker save $image_name | gzip -f > "$DIR/dist/docker/$image_name.tar.gz"
 }
