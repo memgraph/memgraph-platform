@@ -71,7 +71,6 @@ jobs:
     needs: [build_memgraph]
     runs-on: [self-hosted, Docker, X64]
     steps:
-      - name: 
       - name: "Checkout repository and submodules"
         uses: actions/checkout@v3
         with:
