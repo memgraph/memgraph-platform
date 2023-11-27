@@ -25,8 +25,8 @@ build() {
      $MGPLAT_ROOT/$platform_package_file
   cd $MGPLAT_ROOT
   dockerfile="Dockerfile"
-  if [ "$#" -eq 5 ]; then
-    if [[ "$4" == "--no-mage" ]]; then
+  if [[ "$#" -eq 4 ]]; then
+    if [ "$4" == "--no-mage" ]; then
       dockerfile="memgraph_and_lab.Dockerfile"
     else
       print_help
@@ -40,15 +40,15 @@ build() {
   docker save $image_name | gzip -f > "$DIR/dist/docker/$image_name.tar.gz"
 }
 
-if [ "$#" == 0 ]; then
+if [[ "$#" -eq 0 ]]; then
   print_help
 else
   case "$1" in
     build)
-      if [ "$#" -lt 4 || "$#" -gt 5 ]; then
+      if [[ "$#" -lt 4 || "$#" -gt 5 ]]; then
         print_help
       fi
-      build $2 $3 $4
+      build $2 $3 $4 $5
     ;;
     *)
       print_help
