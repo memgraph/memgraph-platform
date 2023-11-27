@@ -1,6 +1,7 @@
 name: Daily builds for amd64
 
 on:
+  push:
   pull_request:
   workflow_dispatch:
     inputs:
