@@ -24,15 +24,15 @@ build() {
   cp $src_package \
      $MGPLAT_ROOT/$platform_package_file
   cd $MGPLAT_ROOT
+  dockerfile="Dockerfile"
   if [ "$#" -eq 5 ]; then
     if [[ "$4" == "--no-mage" ]]; then
       dockerfile="memgraph_and_lab.Dockerfile"
     else
       print_help
     fi
-  else
-    dockerfile="Dockerfile"
   fi
+  echo "-----Using dockerfile $dockerfile-----"
   docker buildx build --platform="linux/$target_arch" -t ${image_name} \
     --build-arg NPM_PACKAGE_TOKEN="${MGPLAT_GHA_PAT_TOKEN}" \
     -f ${dockerfile} .
