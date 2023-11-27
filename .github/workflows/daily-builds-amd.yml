@@ -92,12 +92,12 @@ jobs:
       - name: "Download mage package"
         uses: actions/download-artifact@v3
         with:
-          name: mage_${{ env.TARGET_OS }}.tar.gz
+          name: mage_${{ env.ARCHITECTURE }}.tar.gz
 
       - name: "Build memgraph platform"
         run: |
           mv memgraph_*.deb memgraph_${{ env.TARGET_OS }}.deb
-          docker load < mage_${{ env.TARGET_OS }}.tar.gz
+          docker load < mage_${{ env.ARCHITECTURE }}.tar.gz
           ./scripts/docker_image_platform.sh build \
           memgraph_${{ env.TARGET_OS }}.deb \
           memgraph-platform_${{ env.ARCHITECTURE }} \
