@@ -57,7 +57,7 @@ jobs:
         env:
           MGPLAT_CNT_IMAGE: "memgraph/memgraph-builder:${{ env.TOOLCHAIN_VERSION }}_${{ env.TARGET_OS }}"
           MGPLAT_CNT_NAME: "mgbuilder_${{ env.TARGET_OS }}"
-          MGPLAT_CNT_MG_ROOT: "/memgraph"
+          MGPLAT_CNT_MG_ROOT: "/platform/mage/cpp/memgraph"
           MGPLAT_MG_TAG: ${{ env.MEMGRAPH_TAG }}
           MGPLAT_MG_BUILD_TYPE: ${{ github.event.inputs.build_type || 'Release' }}
 

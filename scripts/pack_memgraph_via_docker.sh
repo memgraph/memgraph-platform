@@ -5,9 +5,8 @@ DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 # NOTE: The builder container image defines for which operating system Memgraph will be built.
 MGPLAT_CNT_IMAGE="${MGPLAT_CNT_IMAGE:-memgraph/memgraph-builder:v4_debian-11}"
 MGPLAT_CNT_NAME="${MGPLAT_CNT_NAME:-mgbuild_builder}"
-MGPLAT_CNT_MG_ROOT="${MGPLAT_CNT_MG_ROOT:-/memgraph}"
-MGPLAT_CNT_OUTPUT_DIR="/memgraph/build/output"
-MGPLAT_HOST_MG_ROOT="${MGPLAT_HOST_MG_ROOT:-$DIR/../mage/cpp/memgraph}"
+MGPLAT_CNT_MG_ROOT="${MGPLAT_CNT_MG_ROOT:-/platform/mage/cpp/memgraph}"
+MGPLAT_CNT_OUTPUT_DIR="$MGPLAT_CNT_MG_ROOT/build/output"
 MGPLAT_MG_TAG="${MGPLAT_MG_TAG:-master}"
 MGPLAT_MG_BUILD_TYPE="${MGPLAT_MG_BUILD_TYPE:-RelWithDebInfo}"
 MGPLAT_DIST_BINARY="$DIR/dist/binary"
@@ -57,7 +56,7 @@ build_pack() {
   # shellcheck disable=SC1091
   source build_memgraph_native.sh
   docker_run "$MGPLAT_CNT_NAME" "$MGPLAT_CNT_IMAGE"
-  docker cp "$MGPLAT_HOST_MG_ROOT" "$MGPLAT_CNT_NAME:$MGPLAT_CNT_MG_ROOT"
+  docker cp "$DIR/.." "$MGPLAT_CNT_NAME:/platform"
   docker_exec "git config --global --add safe.directory $MGPLAT_CNT_MG_ROOT"
   docker cp "$DIR/build_memgraph_native.sh" "$MGPLAT_CNT_NAME:/"
   mg_root="MGPLAT_MG_ROOT=$MGPLAT_CNT_MG_ROOT"
