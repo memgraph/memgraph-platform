@@ -71,6 +71,7 @@ jobs:
     needs: [build_memgraph]
     runs-on: [self-hosted, Docker, X64]
     steps:
+      - name: 
       - name: "Checkout repository and submodules"
         uses: actions/checkout@v3
         with:
@@ -80,9 +81,9 @@ jobs:
 
       - name: "Checkout correct versions in submodules"
         run: |
-          cd mage/cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }} && cd ../..
-          git checkout ${{ env.MAGE_TAG }} && cd ..
-          cd lab && git checkout ${{ env.LAB_TAG }} && cd ..
+          cd lab && git checkout ${{ env.LAB_TAG }}
+          cd ../mage && git checkout ${{ env.MAGE_TAG }}
+          cd cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }}
 
       - name: "Download memgraph package"
         uses: actions/download-artifact@v3
@@ -119,7 +120,7 @@ jobs:
 
       - name: "Checkout correct versions in submodules"
         run: |
-          cd lab && git checkout ${{ env.LAB_TAG }} && cd ..
+          cd lab && git checkout ${{ env.LAB_TAG }}
 
       - name: "Download memgraph package"
         uses: actions/download-artifact@v3
