@@ -70,6 +70,8 @@ cleanup() {
   # docker_exec "rm -rf $MGPLAT_CNT_MG_ROOT/build/*"
   # docker_exec "$MGPLAT_CNT_MG_ROOT/libs/cleanup.sh"
   docker_stop_rm $MGPLAT_CNT_NAME
+  # NOTE: Run cleanup as root or with sudo; sudo ./pack_memgraph_via_docker.sh cleanup
+  rm -rf "$DIR/dist/package/*"
 }
 
 copy_package() {

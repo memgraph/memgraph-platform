@@ -52,7 +52,7 @@ jobs:
       - name: "Build memgraph"
         run: |
           ./scripts/pack_memgraph_via_docker.sh pack
-          ./scripts/pack_memgraph_via_docker.sh cleanup
+          echo ${{ secrets.HOST_PASSWORD }} | sudo -S ./scripts/pack_memgraph_via_docker.sh cleanup
         env:
           MGPLAT_CNT_IMAGE: "memgraph/memgraph-builder:${{ env.TOOLCHAIN_VERSION }}_${{ env.TARGET_OS }}"
           MGPLAT_CNT_NAME: "mgbuilder_${{ env.TARGET_OS }}"
