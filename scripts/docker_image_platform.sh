@@ -32,7 +32,6 @@ build() {
       print_help
     fi
   fi
-  echo "-----Using dockerfile $dockerfile-----"
   docker buildx build --platform="linux/$target_arch" -t ${image_name} \
     --build-arg NPM_PACKAGE_TOKEN="${MGPLAT_GHA_PAT_TOKEN}" \
     -f ${dockerfile} .

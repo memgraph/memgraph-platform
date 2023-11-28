@@ -10,7 +10,7 @@ on:
         default: 'RelWithDebInfo'
         options:
           - Release
-          - ReleaseWithDebug
+          - RelWithDebInfo
           - Debug
       toolchain_version:
         type: choice
@@ -28,6 +28,22 @@ on:
       lab_tag:
         description: "Lab version (choose dev to use the latest source)"
         default: 'dev'
+      build_mage:
+        description: "Build full mage image"
+        type: boolean
+        default: true
+      build_mage_no_ml:
+        description: "Build mage image without ML libraries"
+        type: boolean
+        default: true
+      build_memgraph_platform:
+        description: "Build memgraph plaftorm image"
+        type: boolean
+        default: true
+      build_memgraph_platform_without_mage:
+        description: "Build memgraph plaftorm without mage"
+        type: boolean
+        default: true
 
 env:
   ARCHITECTURE: "arm64"
@@ -67,7 +83,83 @@ jobs:
           name: memgraph_${{ env.TARGET_OS }}.deb
           path: scripts/dist/package/memgraph*.deb
 
+  build_mage:
+    if: ${{ github.event.inputs.build_mage != 'false' }}
+    name: "Build mage"
+    needs: [build_memgraph]
+    runs-on: [self-hosted, Docker, ARM64]
+    steps:
+      - name: "Checkout repository and submodules"
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.PAT }}
+
+      - name: "Checkout correct versions in submodules"
+        run: |
+          cd mage && git checkout ${{ env.MAGE_TAG }}
+          cd cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }}
+
+      - name: "Download memgraph package"
+        uses: actions/download-artifact@v3
+        with:
+          name: memgraph_${{ env.TARGET_OS }}.deb
+
+      - name: "Build mage"
+        run: |
+          mv memgraph_*.deb memgraph_${{ env.TARGET_OS }}.deb
+          ./scripts/docker_image_mage.sh build \
+          memgraph_${{ env.TARGET_OS }}.deb \
+          mage_${{ env.ARCHITECTURE }} \
+          ${{ env.ARCHITECTURE }}
+
+      - name: "Upload mage docker image"
+        uses: actions/upload-artifact@v3
+        with:
+          name: mage_${{ env.ARCHITECTURE }}.tar.gz
+          path: scripts/dist/docker/mage_${{ env.ARCHITECTURE }}.tar.gz
+
+  build_mage_no_ml:
+    if: ${{ github.event.inputs.build_mage_no_ml != 'false' }}
+    name: "Build mage without ML libraries"
+    needs: [build_memgraph]
+    runs-on: [self-hosted, Docker, ARM64]
+    steps:
+      - name: "Checkout repository and submodules"
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.PAT }}
+
+      - name: "Checkout correct versions in submodules"
+        run: |
+          cd mage && git checkout ${{ env.MAGE_TAG }}
+          cd cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }}
+
+      - name: "Download memgraph package"
+        uses: actions/download-artifact@v3
+        with:
+          name: memgraph_${{ env.TARGET_OS }}.deb
+
+      - name: "Build mage"
+        run: |
+          mv memgraph_*.deb memgraph_${{ env.TARGET_OS }}.deb
+          ./scripts/docker_image_mage.sh build \
+          memgraph_${{ env.TARGET_OS }}.deb \
+          mage_${{ env.ARCHITECTURE }}_no-ML \
+          ${{ env.ARCHITECTURE }} \
+          --no-ml
+
+      - name: "Upload mage docker image"
+        uses: actions/upload-artifact@v3
+        with:
+          name: mage_${{ env.ARCHITECTURE }}_no-ML.tar.gz
+          path: scripts/dist/docker/mage_${{ env.ARCHITECTURE }}_no-ML.tar.gz
+
   build_memgraph_platform:
+    if: ${{ github.event.inputs.build_memgraph_platform != 'false' }}
     name: "Build memgraph plaftorm"
     needs: [build_memgraph, build_mage]
     runs-on: [self-hosted, Docker, ARM64]
@@ -112,7 +204,54 @@ jobs:
           name: memgraph-platform_${{ env.ARCHITECTURE }}.tar.gz
           path: scripts/dist/docker/memgraph-platform_${{ env.ARCHITECTURE }}.tar.gz
 
+  build_memgraph_platform_no_ml:
+    if: ${{ github.event.inputs.build_memgraph_platform != 'false' }}
+    name: "Build memgraph plaftorm without ML libraries"
+    needs: [build_memgraph, build_mage_no_ml]
+    runs-on: [self-hosted, Docker, ARM64]
+    steps:
+      - name: "Checkout repository and submodules"
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.PAT }}
+
+      - name: "Checkout correct versions in submodules"
+        run: |
+          cd lab && git checkout ${{ env.LAB_TAG }}
+          cd ../mage && git checkout ${{ env.MAGE_TAG }}
+          cd cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }}
+
+      - name: "Download memgraph package"
+        uses: actions/download-artifact@v3
+        with:
+          name: memgraph_${{ env.TARGET_OS }}.deb
+
+      - name: "Download mage package"
+        uses: actions/download-artifact@v3
+        with:
+          name: mage_${{ env.ARCHITECTURE }}_no-ML.tar.gz
+
+      - name: "Build memgraph platform"
+        run: |
+          mv memgraph_*.deb memgraph_${{ env.TARGET_OS }}.deb
+          docker load < mage_${{ env.ARCHITECTURE }}_no-ML.tar.gz
+          ./scripts/docker_image_platform.sh build \
+          memgraph_${{ env.TARGET_OS }}.deb \
+          memgraph-platform_${{ env.ARCHITECTURE }}_no-ML \
+          ${{ env.ARCHITECTURE }}
+        env:
+          MGPLAT_GHA_PAT_TOKEN: ${{ secrets.PAT }}
+
+      - name: "Upload memgraph platform docker image"
+        uses: actions/upload-artifact@v3
+        with:
+          name: memgraph-platform_${{ env.ARCHITECTURE }}_no-ML.tar.gz
+          path: scripts/dist/docker/memgraph-platform_${{ env.ARCHITECTURE }}_no-ML.tar.gz
+
   build_memgraph_platform_without_mage:
+    if: ${{ github.event.inputs.build_memgraph_platform_without_mage != 'false' }}
     name: "Build memgraph plaftorm without mage"
     needs: [build_memgraph]
     runs-on: [self-hosted, Docker, ARM64]
@@ -149,39 +288,3 @@ jobs:
         with:
           name: memgraph-platform-no-mage_${{ env.ARCHITECTURE }}.tar.gz
           path: scripts/dist/docker/memgraph-platform_${{ env.ARCHITECTURE }}.tar.gz
-
-  build_mage:
-    name: "Build mage"
-    needs: [build_memgraph]
-    runs-on: [self-hosted, Docker, ARM64]
-    steps:
-      - name: "Checkout repository and submodules"
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          submodules: recursive
-          token: ${{ secrets.PAT }}
-
-      - name: "Checkout correct versions in submodules"
-        run: |
-          cd mage && git checkout ${{ env.MAGE_TAG }}
-          cd cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }}
-
-      - name: "Download memgraph package"
-        uses: actions/download-artifact@v3
-        with:
-          name: memgraph_${{ env.TARGET_OS }}.deb
-
-      - name: "Build Mage"
-        run: |
-          mv memgraph_*.deb memgraph_${{ env.TARGET_OS }}.deb
-          ./scripts/docker_image_mage.sh build \
-          memgraph_${{ env.TARGET_OS }}.deb \
-          mage_${{ env.ARCHITECTURE }} \
-          ${{ env.ARCHITECTURE }}
-
-      - name: "Upload mage docker image"
-        uses: actions/upload-artifact@v3
-        with:
-          name: mage_${{ env.ARCHITECTURE }}.tar.gz
-          path: scripts/dist/docker/mage_${{ env.ARCHITECTURE }}.tar.gz

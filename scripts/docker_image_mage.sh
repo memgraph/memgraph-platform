@@ -19,7 +19,15 @@ build() {
   cp $src_package \
      $MAGE_DIR/$mage_package_file
   cd $MAGE_DIR
-  docker buildx build --target prod --platform="linux/$target_arch" -t $image_name -f Dockerfile.release .
+  dockerfile="Dockerfile.release"
+  if [[ "$#" -eq 4 ]]; then
+    if [ "$4" == "--no-ml" ]; then
+      dockerfile="Dockerfile.no_ML"
+    else
+      print_help
+    fi
+  fi
+  docker buildx build --target prod --platform="linux/$target_arch" -t $image_name -f $dockerfile .
   mkdir -p "$DIR/dist/docker"
   docker save $image_name | gzip -f > "$DIR/dist/docker/$image_name.tar.gz"
 }
@@ -29,10 +37,10 @@ if [ "$#" == 0 ]; then
 else
   case "$1" in
     build)
-      if [ "$#" -ne 4 ]; then
+      if [[ "$#" -lt 4 || "$#" -gt 5 ]]; then
         print_help
       fi
-      build $2 $3 $4
+      build $2 $3 $4 $5
     ;;
     *)
       print_help
