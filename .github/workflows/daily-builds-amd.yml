@@ -155,15 +155,15 @@ jobs:
           mv memgraph_*.deb memgraph_${{ env.TARGET_OS }}.deb
           ./scripts/docker_image_mage.sh build \
           memgraph_${{ env.TARGET_OS }}.deb \
-          mage_${{ env.ARCHITECTURE }}_no-ML \
+          mage_${{ env.ARCHITECTURE }}_no-ml \
           ${{ env.ARCHITECTURE }} \
           --no-ml
 
       - name: "Upload mage docker image"
         uses: actions/upload-artifact@v3
         with:
-          name: mage_${{ env.ARCHITECTURE }}_no-ML.tar.gz
-          path: scripts/dist/docker/mage_${{ env.ARCHITECTURE }}_no-ML.tar.gz
+          name: mage_${{ env.ARCHITECTURE }}_no-ml.tar.gz
+          path: scripts/dist/docker/mage_${{ env.ARCHITECTURE }}_no-ml.tar.gz
 
   build_memgraph_platform:
     if: ${{ github.event.inputs.build_memgraph_platform != 'false' }}
@@ -238,15 +238,15 @@ jobs:
       - name: "Download mage package"
         uses: actions/download-artifact@v3
         with:
-          name: mage_${{ env.ARCHITECTURE }}_no-ML.tar.gz
+          name: mage_${{ env.ARCHITECTURE }}_no-ml.tar.gz
 
       - name: "Build memgraph platform"
         run: |
           mv memgraph_*.deb memgraph_${{ env.TARGET_OS }}.deb
-          docker load < mage_${{ env.ARCHITECTURE }}_no-ML.tar.gz
+          docker load < mage_${{ env.ARCHITECTURE }}_no-ml.tar.gz
           ./scripts/docker_image_platform.sh build \
           memgraph_${{ env.TARGET_OS }}.deb \
-          memgraph-platform_${{ env.ARCHITECTURE }}_no-ML \
+          memgraph-platform_${{ env.ARCHITECTURE }}_no-ml \
           ${{ env.ARCHITECTURE }}
         env:
           MGPLAT_GHA_PAT_TOKEN: ${{ secrets.PAT }}
@@ -254,8 +254,8 @@ jobs:
       - name: "Upload memgraph platform docker image"
         uses: actions/upload-artifact@v3
         with:
-          name: memgraph-platform_${{ env.ARCHITECTURE }}_no-ML.tar.gz
-          path: scripts/dist/docker/memgraph-platform_${{ env.ARCHITECTURE }}_no-ML.tar.gz
+          name: memgraph-platform_${{ env.ARCHITECTURE }}_no-ml.tar.gz
+          path: scripts/dist/docker/memgraph-platform_${{ env.ARCHITECTURE }}_no-ml.tar.gz
 
   build_memgraph_platform_without_mage:
     if: ${{ github.event.inputs.build_memgraph_platform_without_mage != 'false' }}
