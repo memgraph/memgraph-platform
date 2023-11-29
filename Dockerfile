@@ -30,30 +30,10 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 ###################################################################################################################################################
-FROM mage_${TARGETARCH}:latest as mage-dev
+
 # MAGE
-# FROM base as mage-dev
-#
-# WORKDIR /mage
-# COPY mage /mage
-#
-# RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
-#
-# ENV PATH="/root/.cargo/bin:${PATH}"
-#
-# RUN python3 -m pip install --upgrade pip \
-#     && python3 -m pip install --default-timeout=1000 -r /mage/python/requirements.txt
-#
-# RUN python3 -m pip --default-timeout=1000 --no-cache-dir install torch-sparse torch-cluster torch-spline-conv \
-#     torch-geometric torch-scatter -f https://data.pyg.org/whl/torch-1.12.0+cu102.html
-#
-# RUN python3 /mage/setup build -p /usr/lib/memgraph/query_modules/
-#
-# # DGL build from source
-# RUN git clone --recurse-submodules -b 0.9.x https://github.com/dmlc/dgl.git  \
-#     && cd dgl && mkdir build && cd build && cmake .. \
-#     && make -j4 && cd ../python && python3 setup.py install
-#
+FROM mage_${TARGETARCH}:latest as mage-dev
+
 ###################################################################################################################################################
 
 # Lab: Build backend

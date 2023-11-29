@@ -1,6 +1,7 @@
 name: Daily builds for amd64
 
 on:
+  #NOTE: Remove pull_request: before merge
   pull_request:
   workflow_dispatch:
     inputs:
@@ -137,6 +138,12 @@ jobs:
         run: |
           cd mage && git checkout ${{ env.MAGE_TAG }}
           cd cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }}
+
+      #NOTE: Remove this step before merge
+      - name: "Move no ML files into mage directory"
+        run: |
+          mv Dockerfile.no_ML mage/
+          mv requirements_no_ml.txt mage/python/
 
       - name: "Download memgraph package"
         uses: actions/download-artifact@v3
