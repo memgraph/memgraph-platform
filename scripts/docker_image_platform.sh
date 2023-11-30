@@ -65,7 +65,7 @@ build() {
   if [[ "$mgplat_tar_ext" != "tar.gz" ]]; then
     mgplat_tar="$MGPLAT_TAR.tar.gz"
   fi
-  docker save $MAGE_IMAGE | gzip -f > "$DIR/dist/docker/$mgplat_tar"
+  docker save $MGPLAT_IMAGE | gzip -f > "$DIR/dist/docker/$mgplat_tar"
 
   if [[ "$CLEANUP" == "true" ]]; then
     docker image rm $MGPLAT_IMAGE
