@@ -53,17 +53,17 @@ env:
   MEMGRAPH_TAG: ${{ github.event.inputs.memgraph_tag || 'master' }}
   TARGET_OS: "debian-11"
   TOOLCHAIN_VERSION: ${{ github.events.inputs.toolchain_version || 'v4' }}
-  MG_PACKAGE_PATH: "memgraph_${{ env.TARGET_OS }}.deb"
+  MG_PACKAGE_PATH: "memgraph_debian-11.deb"
   MAGE_IMAGE: "memgraph/mage:${{ github.run_id }}"
-  MAGE_TAR: "mage_${{ env.TARGET_ARCH }}.tar.gz"
+  MAGE_TAR: "mage_amd64.tar.gz"
   MAGE_NO_ML_IMAGE: "memgraph/mage:${{ github.run_id }}-no-ml"
-  MAGE_NO_ML_TAR: "mage_no-ml_${{ env.TARGET_ARCH }}.tar.gz"
+  MAGE_NO_ML_TAR: "mage_no-ml_amd64.tar.gz"
   MGPLAT_IMAGE: "memgraph/memgraph-platform:${{ github.run_id }}"
-  MGPLAT_TAR: "memgraph-platform_${{ env.TARGET_ARCH }}.tar.gz"
+  MGPLAT_TAR: "memgraph-platform_amd64.tar.gz"
   MGPLAT_NO_MAGE_IMAGE: "memgraph/memgraph-platform:${{ github.run_id }}-no-mage"
-  MGPLAT_NO_MAGE_TAR: "memgraph-platform_no-mage_${{ env.TARGET_ARCH }}.tar.gz"
+  MGPLAT_NO_MAGE_TAR: "memgraph-platform_no-mage_amd64.tar.gz"
   MGPLAT_NO_ML_IMAGE: "memgraph/memgraph-platform:${{ github.run_id }}-no-ml"
-  MGPLAT_NO_ML_TAR: "memgraph-platform_no-ml_${{ env.TARGET_ARCH }}.tar.gz"
+  MGPLAT_NO_ML_TAR: "memgraph-platform_no-ml_amd64.tar.gz"
   MGPLAT_GHA_PAT_TOKEN: ${{ secrets.PAT }}
 
 jobs:
