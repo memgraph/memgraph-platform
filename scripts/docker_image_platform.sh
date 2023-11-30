@@ -40,13 +40,13 @@ build() {
     ;;
     --mage-from-tar)
       docker_load_out=$(docker load < $2)
-      mage_image=${docker_load_out#Loaded image:}
+      mage_image=$(echo ${docker_load_out#Loaded image:} | tr -d '[:blank:]')
     ;;
     *)
       print_help
     ;;
   esac
-
+  
   platform_package_file="memgraph-$TARGET_ARCH.deb"
   cp $MG_PACKAGE_PATH \
      $MGPLAT_ROOT/$platform_package_file

@@ -1,5 +1,6 @@
 # For mage
 ARG PY_VERSION_DEFAULT=3.9
+ARG MAGE_IMAGE
 
 FROM debian:bullseye as base
 
@@ -32,8 +33,7 @@ RUN apt-get update && apt-get install -y \
 ###################################################################################################################################################
 
 # MAGE
-ARG MAGE_IMAGE
-FROM ${MAGE_IMAGE} as mage-dev
+FROM $MAGE_IMAGE as mage-dev
 
 ###################################################################################################################################################
 

@@ -109,6 +109,9 @@ jobs:
           submodules: recursive
           token: ${{ secrets.PAT }}
 
+      - name: "Unlock keychain for current session" # Required beacuse ARM builds run on macos
+        run: security -v unlock-keychain -p ${{ secrets.SELF_HOSTED_RUNNER_PASSWORD }} ~/Library/Keychains/login.keychain-db
+
       - name: "Checkout correct versions in submodules"
         run: |
           cd mage && git checkout ${{ env.MAGE_TAG }}
@@ -144,6 +147,9 @@ jobs:
           fetch-depth: 0
           submodules: recursive
           token: ${{ secrets.PAT }}
+
+      - name: "Unlock keychain for current session" # Required beacuse ARM builds run on macos
+        run: security -v unlock-keychain -p ${{ secrets.SELF_HOSTED_RUNNER_PASSWORD }} ~/Library/Keychains/login.keychain-db
 
       - name: "Checkout correct versions in submodules"
         run: |
@@ -189,6 +195,9 @@ jobs:
           submodules: recursive
           token: ${{ secrets.PAT }}
 
+      - name: "Unlock keychain for current session" # Required beacuse ARM builds run on macos
+        run: security -v unlock-keychain -p ${{ secrets.SELF_HOSTED_RUNNER_PASSWORD }} ~/Library/Keychains/login.keychain-db
+
       - name: "Checkout correct versions in submodules"
         run: |
           cd lab && git checkout ${{ env.LAB_TAG }}
@@ -230,6 +239,9 @@ jobs:
           fetch-depth: 0
           submodules: recursive
           token: ${{ secrets.PAT }}
+
+      - name: "Unlock keychain for current session" # Required beacuse ARM builds run on macos
+        run: security -v unlock-keychain -p ${{ secrets.SELF_HOSTED_RUNNER_PASSWORD }} ~/Library/Keychains/login.keychain-db
 
       - name: "Checkout correct versions in submodules"
         run: |
@@ -274,6 +286,9 @@ jobs:
           fetch-depth: 0
           submodules: recursive
           token: ${{ secrets.PAT }}
+
+      - name: "Unlock keychain for current session" # Required beacuse ARM builds run on macos
+        run: security -v unlock-keychain -p ${{ secrets.SELF_HOSTED_RUNNER_PASSWORD }} ~/Library/Keychains/login.keychain-db
 
       - name: "Checkout correct versions in submodules"
         run: |
