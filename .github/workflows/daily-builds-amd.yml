@@ -47,12 +47,24 @@ on:
         default: true
 
 env:
-  ARCHITECTURE: "amd64"
+  TARGET_ARCH: "amd64"
   LAB_TAG: ${{ github.event.inputs.lab_tag || 'dev' }}
   MAGE_TAG: ${{ github.event.inputs.mage_tag || 'main' }}
   MEMGRAPH_TAG: ${{ github.event.inputs.memgraph_tag || 'master' }}
   TARGET_OS: "debian-11"
   TOOLCHAIN_VERSION: ${{ github.events.inputs.toolchain_version || 'v4' }}
+  MG_PACKAGE_PATH: "memgraph_${{ env.TARGET_OS }}.deb"
+  MAGE_IMAGE: "memgraph/mage:${{ github.run_id }}"
+  MAGE_TAR: "mage_${{ env.TARGET_ARCH }}.tar.gz"
+  MAGE_NO_ML_IMAGE: "memgraph/mage:${{ github.run_id }}-no-ml"
+  MAGE_NO_ML_TAR: "mage_no-ml_${{ env.TARGET_ARCH }}.tar.gz"
+  MGPLAT_IMAGE: "memgraph/memgraph-platform:${{ github.run_id }}"
+  MGPLAT_TAR: "memgraph-platform_${{ env.TARGET_ARCH }}.tar.gz"
+  MGPLAT_NO_MAGE_IMAGE: "memgraph/memgraph-platform:${{ github.run_id }}-no-mage"
+  MGPLAT_NO_MAGE_TAR: "memgraph-platform_no-mage_${{ env.TARGET_ARCH }}.tar.gz"
+  MGPLAT_NO_ML_IMAGE: "memgraph/memgraph-platform:${{ github.run_id }}-no-ml"
+  MGPLAT_NO_ML_TAR: "memgraph-platform_no-ml_${{ env.TARGET_ARCH }}.tar.gz"
+  MGPLAT_GHA_PAT_TOKEN: ${{ secrets.PAT }}
 
 jobs:
   build_memgraph:
@@ -81,7 +93,7 @@ jobs:
       - name: "Upload memgraph binary"
         uses: actions/upload-artifact@v3
         with:
-          name: memgraph_${{ env.TARGET_OS }}.deb
+          name: ${{ env.MG_PACKAGE_PATH }}
           path: scripts/dist/package/memgraph*.deb
 
   build_mage:
@@ -105,21 +117,20 @@ jobs:
       - name: "Download memgraph package"
         uses: actions/download-artifact@v3
         with:
-          name: memgraph_${{ env.TARGET_OS }}.deb
+          name: ${{ env.MG_PACKAGE_PATH }}
 
       - name: "Build mage"
         run: |
-          mv memgraph_*.deb memgraph_${{ env.TARGET_OS }}.deb
-          ./scripts/docker_image_mage.sh build \
-          memgraph_${{ env.TARGET_OS }}.deb \
-          mage_${{ env.ARCHITECTURE }} \
-          ${{ env.ARCHITECTURE }}
+          mv memgraph_*.deb ${{ env.MG_PACKAGE_PATH }}
+          ./scripts/docker_image_mage.sh build
+        env:
+          CLEANUP: "true"
 
       - name: "Upload mage docker image"
         uses: actions/upload-artifact@v3
         with:
-          name: mage_${{ env.ARCHITECTURE }}.tar.gz
-          path: scripts/dist/docker/mage_${{ env.ARCHITECTURE }}.tar.gz
+          name: ${{ env.MAGE_TAR }}
+          path: scripts/dist/docker/${{ env.MAGE_TAR }}
 
   build_mage_no_ml:
     if: ${{ github.event.inputs.build_mage_no_ml != 'false' }}
@@ -148,22 +159,22 @@ jobs:
       - name: "Download memgraph package"
         uses: actions/download-artifact@v3
         with:
-          name: memgraph_${{ env.TARGET_OS }}.deb
+          name: ${{ env.MG_PACKAGE_PATH }}
 
       - name: "Build mage"
         run: |
-          mv memgraph_*.deb memgraph_${{ env.TARGET_OS }}.deb
-          ./scripts/docker_image_mage.sh build \
-          memgraph_${{ env.TARGET_OS }}.deb \
-          mage_${{ env.ARCHITECTURE }}_no-ml \
-          ${{ env.ARCHITECTURE }} \
-          --no-ml
+          mv memgraph_*.deb ${{ env.MG_PACKAGE_PATH }}
+          ./scripts/docker_image_mage.sh build --no-ml
+        env:
+          MAGE_IMAGE_NAME: ${{ env.MAGE_NO_ML_IMAGE }}
+          MAGE_TAR: ${{ env.MAGE_NO_ML_TAR }}
+          CLEANUP: "true"
 
       - name: "Upload mage docker image"
         uses: actions/upload-artifact@v3
         with:
-          name: mage_${{ env.ARCHITECTURE }}_no-ml.tar.gz
-          path: scripts/dist/docker/mage_${{ env.ARCHITECTURE }}_no-ml.tar.gz
+          name: ${{ env.MAGE_NO_ML_TAR }}
+          path: scripts/dist/docker/${{ env.MAGE_NO_ML_TAR }}
 
   build_memgraph_platform:
     if: ${{ github.event.inputs.build_memgraph_platform != 'false' }}
@@ -187,29 +198,25 @@ jobs:
       - name: "Download memgraph package"
         uses: actions/download-artifact@v3
         with:
-          name: memgraph_${{ env.TARGET_OS }}.deb
+          name: ${{ env.MG_PACKAGE_PATH }}
 
       - name: "Download mage package"
         uses: actions/download-artifact@v3
         with:
-          name: mage_${{ env.ARCHITECTURE }}.tar.gz
+          name: ${{ env.MAGE_TAR }}
 
       - name: "Build memgraph platform"
         run: |
-          mv memgraph_*.deb memgraph_${{ env.TARGET_OS }}.deb
-          docker load < mage_${{ env.ARCHITECTURE }}.tar.gz
-          ./scripts/docker_image_platform.sh build \
-          memgraph_${{ env.TARGET_OS }}.deb \
-          memgraph-platform_${{ env.ARCHITECTURE }} \
-          ${{ env.ARCHITECTURE }}
+          mv memgraph_*.deb ${{ env.MG_PACKAGE_PATH }}
+          ./scripts/docker_image_platform.sh build --mage-from-tar ${{ env.MAGE_TAR }}
         env:
-          MGPLAT_GHA_PAT_TOKEN: ${{ secrets.PAT }}
+          CLEANUP: "true"
 
       - name: "Upload memgraph platform docker image"
         uses: actions/upload-artifact@v3
         with:
-          name: memgraph-platform_${{ env.ARCHITECTURE }}.tar.gz
-          path: scripts/dist/docker/memgraph-platform_${{ env.ARCHITECTURE }}.tar.gz
+          name: ${{ env.MGPLAT_TAR }}
+          path: scripts/dist/docker/${{ env.MGPLAT_TAR }}
 
   build_memgraph_platform_no_ml:
     if: ${{ github.event.inputs.build_memgraph_platform != 'false' }}
@@ -233,29 +240,27 @@ jobs:
       - name: "Download memgraph package"
         uses: actions/download-artifact@v3
         with:
-          name: memgraph_${{ env.TARGET_OS }}.deb
+          name: ${{ env.MG_PACKAGE_PATH }}
 
       - name: "Download mage package"
         uses: actions/download-artifact@v3
         with:
-          name: mage_${{ env.ARCHITECTURE }}_no-ml.tar.gz
+          name: ${{ env.MAGE_NO_ML_TAR }}
 
       - name: "Build memgraph platform"
         run: |
-          mv memgraph_*.deb memgraph_${{ env.TARGET_OS }}.deb
-          docker load < mage_${{ env.ARCHITECTURE }}_no-ml.tar.gz
-          ./scripts/docker_image_platform.sh build \
-          memgraph_${{ env.TARGET_OS }}.deb \
-          memgraph-platform_${{ env.ARCHITECTURE }}_no-ml \
-          ${{ env.ARCHITECTURE }}
+          mv memgraph_*.deb ${{ env.MG_PACKAGE_PATH }}
+          ./scripts/docker_image_platform.sh build --mage-from-tar ${{ env.MAGE_NO_ML_TAR }}
         env:
-          MGPLAT_GHA_PAT_TOKEN: ${{ secrets.PAT }}
+          MGPLAT_IMAGE: ${{ env.MGPLAT_NO_ML_IMAGE }}
+          MGPLAT_TAR: ${{ env.MGPLAT_NO_ML_TAR }}
+          CLEANUP: "true"
 
       - name: "Upload memgraph platform docker image"
         uses: actions/upload-artifact@v3
         with:
-          name: memgraph-platform_${{ env.ARCHITECTURE }}_no-ml.tar.gz
-          path: scripts/dist/docker/memgraph-platform_${{ env.ARCHITECTURE }}_no-ml.tar.gz
+          name: ${{ env.MGPLAT_NO_ML_TAR }}
+          path: scripts/dist/docker/${{ env.MGPLAT_NO_ML_TAR }}
 
   build_memgraph_platform_without_mage:
     if: ${{ github.event.inputs.build_memgraph_platform_without_mage != 'false' }}
@@ -277,21 +282,19 @@ jobs:
       - name: "Download memgraph package"
         uses: actions/download-artifact@v3
         with:
-          name: memgraph_${{ env.TARGET_OS }}.deb
+          name: ${{ env.MG_PACKAGE_PATH }}
 
       - name: "Build memgraph platform"
         run: |
-          mv memgraph_*.deb memgraph_${{ env.TARGET_OS }}.deb
-          ./scripts/docker_image_platform.sh build \
-          memgraph_${{ env.TARGET_OS }}.deb \
-          memgraph-platform_${{ env.ARCHITECTURE }} \
-          ${{ env.ARCHITECTURE }} \
-          --no-mage
+          mv memgraph_*.deb ${{ env.MG_PACKAGE_PATH }}
+          ./scripts/docker_image_platform.sh build --no-mage
         env:
-          MGPLAT_GHA_PAT_TOKEN: ${{ secrets.PAT }}
+          MGPLAT_IMAGE: ${{ env.MGPLAT_NO_MAGE_IMAGE }}
+          MGPLAT_TAR: $${{ env.MGPLAT_NO_MAGE_TAR }}
+          CLEANUP: "true"
 
       - name: "Upload memgraph platform docker image"
         uses: actions/upload-artifact@v3
         with:
-          name: memgraph-platform-no-mage_${{ env.ARCHITECTURE }}.tar.gz
-          path: scripts/dist/docker/memgraph-platform_${{ env.ARCHITECTURE }}.tar.gz
+          name: ${{ env.MGPLAT_NO_MAGE_TAR }}
+          path: scripts/dist/docker/${{ env.MGPLAT_NO_MAGE_TAR }}
