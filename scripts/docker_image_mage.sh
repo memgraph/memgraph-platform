@@ -35,7 +35,7 @@ build() {
   fi
 
   mage_package_file="memgraph-$TARGET_ARCH.deb"
-  cp $MG_PAKCAGE_PATH \
+  cp $MG_PACKAGE_PATH \
      $MAGE_ROOT/$mage_package_file
   cd $MAGE_ROOT
 

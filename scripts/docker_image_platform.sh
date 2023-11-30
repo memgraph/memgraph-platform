@@ -55,7 +55,7 @@ build() {
     --platform="linux/$TARGET_ARCH" \
     -t ${MGPLAT_IMAGE} \
     --build-arg NPM_PACKAGE_TOKEN="${MGPLAT_GHA_PAT_TOKEN}" \
-    --build-arg MAGE_IMAGE="${mage_image}"
+    --build-arg MAGE_IMAGE="${mage_image}" \
     -f ${dockerfile} .
   mkdir -p "$DIR/dist/docker"
 
