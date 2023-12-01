@@ -54,9 +54,9 @@ env:
   TARGET_OS: "debian-11-arm"
   TOOLCHAIN_VERSION: ${{ github.events.inputs.toolchain_version || 'v4' }}
   MG_PACKAGE_PATH: "memgraph_debian-11-arm.deb"
-  MAGE_IMAGE: "memgraph/mage:${{ github.run_id }}"
+  MAGE_IMAGE: "memgraph/memgraph-mage:${{ github.run_id }}"
   MAGE_TAR: "mage_arm64.tar.gz"
-  MAGE_NO_ML_IMAGE: "memgraph/mage:${{ github.run_id }}-no-ml"
+  MAGE_NO_ML_IMAGE: "memgraph/memgraph-mage:${{ github.run_id }}-no-ml"
   MAGE_NO_ML_TAR: "mage_no-ml_arm64.tar.gz"
   MGPLAT_IMAGE: "memgraph/memgraph-platform:${{ github.run_id }}"
   MGPLAT_TAR: "memgraph-platform_arm64.tar.gz"
