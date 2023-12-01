@@ -53,7 +53,7 @@ build() {
     mage_tar="$MAGE_TAR.tar.gz"
   fi
   docker save $MAGE_IMAGE | gzip -f > "$DIR/dist/docker/$mage_tar"
-  
+
   if [[ "$CLEANUP" == "true" ]]; then
     docker image rm $MAGE_IMAGE
   fi

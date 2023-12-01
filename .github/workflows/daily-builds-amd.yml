@@ -166,7 +166,7 @@ jobs:
           mv memgraph_*.deb ${{ env.MG_PACKAGE_PATH }}
           ./scripts/docker_image_mage.sh build --no-ml
         env:
-          MAGE_IMAGE_NAME: ${{ env.MAGE_NO_ML_IMAGE }}
+          MAGE_IMAGE: ${{ env.MAGE_NO_ML_IMAGE }}
           MAGE_TAR: ${{ env.MAGE_NO_ML_TAR }}
           CLEANUP: "true"
 
