@@ -61,10 +61,10 @@ build() {
 
   mgplat_tar=$MGPLAT_TAR
   mgplat_tar_ext=${MGPLAT_TAR#*.}
-  echo $mgplat_tar_ext
   if [[ "$mgplat_tar_ext" != "tar.gz" ]]; then
     mgplat_tar="$MGPLAT_TAR.tar.gz"
   fi
+  echo -e "Creating $mgplat_tar"
   docker save $MGPLAT_IMAGE | gzip -f > "$DIR/dist/docker/$mgplat_tar"
 
   if [[ "$CLEANUP" == "true" ]]; then

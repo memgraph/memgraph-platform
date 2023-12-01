@@ -290,7 +290,7 @@ jobs:
           ./scripts/docker_image_platform.sh build --no-mage
         env:
           MGPLAT_IMAGE: ${{ env.MGPLAT_NO_MAGE_IMAGE }}
-          MGPLAT_TAR: $${{ env.MGPLAT_NO_MAGE_TAR }}
+          MGPLAT_TAR: ${{ env.MGPLAT_NO_MAGE_TAR }}
           CLEANUP: "true"
 
       - name: "Upload memgraph platform docker image"
