@@ -73,6 +73,9 @@ jobs:
     name: "Build memgraph"
     runs-on: [self-hosted, Docker, X64]
     steps:
+      - name: "Clean the working directory"
+        run: rm -rf *
+
       - name: "Checkout repository and submodules"
         uses: actions/checkout@v3
         with:
@@ -104,6 +107,9 @@ jobs:
     needs: [build_memgraph]
     runs-on: [self-hosted, Docker, X64]
     steps:
+      - name: "Clean the working directory"
+        run: rm -rf *
+
       - name: "Checkout repository and submodules"
         uses: actions/checkout@v3
         with:
@@ -139,6 +145,9 @@ jobs:
     needs: [build_memgraph]
     runs-on: [self-hosted, Docker, X64]
     steps:
+      - name: "Clean the working directory"
+        run: rm -rf *
+
       - name: "Checkout repository and submodules"
         uses: actions/checkout@v3
         with:
@@ -175,6 +184,9 @@ jobs:
     needs: [build_memgraph]
     runs-on: [self-hosted, Docker, X64]
     steps:
+      - name: "Clean the working directory"
+        run: rm -rf *
+
       - name: "Checkout repository and submodules"
         uses: actions/checkout@v3
         with:
@@ -219,6 +231,9 @@ jobs:
     needs: [build_memgraph, build_mage]
     runs-on: [self-hosted, Docker, X64]
     steps:
+      - name: "Clean the working directory"
+        run: rm -rf *
+
       - name: "Checkout repository and submodules"
         uses: actions/checkout@v3
         with:
@@ -261,6 +276,9 @@ jobs:
     needs: [build_memgraph, build_mage_no_ml]
     runs-on: [self-hosted, Docker, X64]
     steps:
+      - name: "Clean the working directory"
+        run: rm -rf *
+
       - name: "Checkout repository and submodules"
         uses: actions/checkout@v3
         with:
@@ -305,6 +323,9 @@ jobs:
     needs: [build_memgraph]
     runs-on: [self-hosted, Docker, X64]
     steps:
+      - name: "Clean the working directory"
+        run: rm -rf *
+
       - name: "Checkout repository and submodules"
         uses: actions/checkout@v3
         with:

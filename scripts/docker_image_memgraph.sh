@@ -3,8 +3,9 @@ set -eo pipefail
 DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 MEMGRAPH_DOCKER_DIR="$DIR/../mage/cpp/memgraph/release/docker"
+MEMGRAPH_ROOT="$DIR/../mage/cpp/memgraph"
 TARGET_ARCH="${TARGET_ARCH:-amd64}"
-MG_PACKAGE_PATH="${MG_PACKAGE_PATH:-$DIR/../memgraph.deb}"
+MG_PACKAGE_PATH="${MG_PACKAGE_PATH:-$MEMGRAPH_ROOT/memgraph.deb}"
 MEMGRAPH_IMAGE="${MEMGRAPH_IMAGE:-memgraph/memgraph:latest}"
 MEMGRAPH_TAR="${MEMGRAPH_TAR:-memgraph_$TARGET_ARCH.tar.gz}"
 CLEANUP="${CLEANUP:-false}"
@@ -34,7 +35,7 @@ build() {
 
   docker buildx build \
     --platform="linux/$TARGET_ARCH" \
-    -tag $MEMGRAPH_IMAGE \
+    --tag $MEMGRAPH_IMAGE \
     --build-arg BINARY_NAME="memgraph-" \
     --build-arg EXTENSION="deb"
     --file $dockerfile .
