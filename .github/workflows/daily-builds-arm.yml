@@ -54,6 +54,8 @@ env:
   TARGET_OS: "debian-11-arm"
   TOOLCHAIN_VERSION: ${{ github.events.inputs.toolchain_version || 'v4' }}
   MG_PACKAGE_PATH: "memgraph_debian-11-arm.deb"
+  MEMGRAPH_IMAGE: "memgraph/memgraph:${{ github.run_id }}"
+  MEMGRAPH_TAR: "memgraph_arm64.tar.gz"
   MAGE_IMAGE: "memgraph/memgraph-mage:${{ github.run_id }}"
   MAGE_TAR: "mage_arm64.tar.gz"
   MAGE_NO_ML_IMAGE: "memgraph/memgraph-mage:${{ github.run_id }}-no-ml"
@@ -95,6 +97,41 @@ jobs:
         with:
           name: ${{ env.MG_PACKAGE_PATH }}
           path: scripts/dist/package/memgraph*.deb
+
+  build_memgraph_image:
+    if: ${{ github.event.inputs.build_memgraph_image != 'false' }}
+    name: "Build memgraph image"
+    needs: [build_memgraph]
+    runs-on: [self-hosted, Docker, ARM64]
+    steps:
+      - name: "Checkout repository and submodules"
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.PAT }}
+
+      - name: "Checkout correct versions in submodules"
+        run: |
+          cd mage/cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }}
+
+      - name: "Download memgraph package"
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.MG_PACKAGE_PATH }}
+
+      - name: "Build memgraph image"
+        run: |
+          mv memgraph_*.deb ${{ env.MG_PACKAGE_PATH }}
+          ./scripts/docker_image_memgraph.sh build
+        env:
+          CLEANUP: "true"
+
+      - name: "Upload memgraph docker image"
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.MEMGRAPH_TAR }}
+          path: scripts/dist/docker/${{ env.MEMGRAPH_TAR }}
 
   build_mage:
     if: ${{ github.event.inputs.build_mage != 'false' }}

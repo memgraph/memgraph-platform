@@ -5,7 +5,7 @@ DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 MAGE_ROOT="$DIR/../mage"
 TARGET_ARCH="${TARGET_ARCH:-amd64}"
 MG_PACKAGE_PATH="${MG_PACKAGE_PATH:-$MAGE_ROOT/memgraph.deb}"
-MAGE_IMAGE="${MAGE_IMAGE:-memgraph/mage:latest}"
+MAGE_IMAGE="${MAGE_IMAGE:-memgraph/memgraph-mage:latest}"
 MAGE_TAR="${MAGE_TAR:-mage_$TARGET_ARCH.tar.gz}"
 CLEANUP="${CLEANUP:-false}"
 
