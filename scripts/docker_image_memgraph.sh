@@ -37,7 +37,7 @@ build() {
     --platform="linux/$TARGET_ARCH" \
     --tag $MEMGRAPH_IMAGE \
     --build-arg BINARY_NAME="memgraph-" \
-    --build-arg EXTENSION="deb"
+    --build-arg EXTENSION="deb" \
     --file $dockerfile .
   mkdir -p "$DIR/dist/docker"
 
