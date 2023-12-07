@@ -145,7 +145,7 @@ jobs:
     needs: [build_memgraph]
     runs-on: [self-hosted, Docker, ARM64]
     steps:
-     - name: "Clean the working directory"
+      - name: "Clean the working directory"
         run: rm -rf *
 
       - name: "Checkout repository and submodules"
@@ -187,7 +187,7 @@ jobs:
     needs: [build_memgraph]
     runs-on: [self-hosted, Docker, ARM64]
     steps:
-     - name: "Clean the working directory"
+      - name: "Clean the working directory"
         run: rm -rf *
 
       - name: "Checkout repository and submodules"
@@ -237,7 +237,7 @@ jobs:
     needs: [build_memgraph, build_mage]
     runs-on: [self-hosted, Docker, ARM64]
     steps:
-     - name: "Clean the working directory"
+      - name: "Clean the working directory"
         run: rm -rf *
 
       - name: "Checkout repository and submodules"
@@ -285,7 +285,7 @@ jobs:
     needs: [build_memgraph, build_mage_no_ml]
     runs-on: [self-hosted, Docker, ARM64]
     steps:
-     - name: "Clean the working directory"
+      - name: "Clean the working directory"
         run: rm -rf *
 
       - name: "Checkout repository and submodules"
@@ -335,7 +335,7 @@ jobs:
     needs: [build_memgraph]
     runs-on: [self-hosted, Docker, ARM64]
     steps:
-     - name: "Clean the working directory"
+      - name: "Clean the working directory"
         run: rm -rf *
 
       - name: "Checkout repository and submodules"
