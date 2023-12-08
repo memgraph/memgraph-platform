@@ -119,7 +119,7 @@ jobs:
 
       - name: "Checkout correct versions in submodules"
         run: |
-          cd mage/cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }}
+          cd mage/cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }} && git pull origin {{ env.MEMGRAPH_TAG }}
 
       - name: "Download memgraph package"
         uses: actions/download-artifact@v3
@@ -157,8 +157,8 @@ jobs:
 
       - name: "Checkout correct versions in submodules"
         run: |
-          cd mage && git checkout ${{ env.MAGE_TAG }}
-          cd cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }}
+          cd mage && git checkout ${{ env.MAGE_TAG }} && git pull origin {{ env.MAGE_TAG }}
+          cd cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }} && git pull origin {{ env.MEMGRAPH_TAG }}
 
       - name: "Download memgraph package"
         uses: actions/download-artifact@v3
@@ -196,8 +196,8 @@ jobs:
 
       - name: "Checkout correct versions in submodules"
         run: |
-          cd mage && git checkout ${{ env.MAGE_TAG }}
-          cd cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }}
+          cd mage && git checkout ${{ env.MAGE_TAG }} && git pull origin {{ env.MAGE_TAG }}
+          cd cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }} && git pull origin {{ env.MEMGRAPH_TAG }}
 
       #NOTE: Remove this step before merge
       - name: "Move no ML files into mage directory"
@@ -243,9 +243,9 @@ jobs:
 
       - name: "Checkout correct versions in submodules"
         run: |
-          cd lab && git checkout ${{ env.LAB_TAG }}
-          cd ../mage && git checkout ${{ env.MAGE_TAG }}
-          cd cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }}
+          cd lab && git checkout ${{ env.LAB_TAG }} && git pull origin {{ env.LAB_TAG }}
+          cd ../mage && git checkout ${{ env.MAGE_TAG }} && git pull origin {{ env.MAGE_TAG }}
+          cd cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }} && git pull origin {{ env.MEMGRAPH_TAG }}
 
       - name: "Download memgraph package"
         uses: actions/download-artifact@v3
@@ -288,9 +288,9 @@ jobs:
 
       - name: "Checkout correct versions in submodules"
         run: |
-          cd lab && git checkout ${{ env.LAB_TAG }}
-          cd ../mage && git checkout ${{ env.MAGE_TAG }}
-          cd cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }}
+          cd lab && git checkout ${{ env.LAB_TAG }} && git pull origin {{ env.LAB_TAG }}
+          cd ../mage && git checkout ${{ env.MAGE_TAG }} && git pull origin {{ env.MAGE_TAG }}
+          cd cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }} && git pull origin {{ env.MEMGRAPH_TAG }}
 
       - name: "Download memgraph package"
         uses: actions/download-artifact@v3
@@ -335,7 +335,7 @@ jobs:
 
       - name: "Checkout correct versions in submodules"
         run: |
-          cd lab && git checkout ${{ env.LAB_TAG }}
+          cd lab && git checkout ${{ env.LAB_TAG }} && git pull origin {{ env.LAB_TAG }}
 
       - name: "Download memgraph package"
         uses: actions/download-artifact@v3
