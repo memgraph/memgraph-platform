@@ -205,12 +205,6 @@ jobs:
           cd mage && git checkout ${{ env.MAGE_TAG }} && git pull origin ${{ env.MAGE_TAG }}
           cd cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }} && git pull origin ${{ env.MEMGRAPH_TAG }}
 
-      #NOTE: Remove this step before merge
-      - name: "Move no ML files into mage directory"
-        run: |
-          mv Dockerfile.no_ML mage/
-          mv requirements_no_ml.txt mage/python/
-
       - name: "Download memgraph package"
         uses: actions/download-artifact@v3
         with:
