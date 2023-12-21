@@ -26,13 +26,13 @@ processes with supervisor. First, it builds Memgraph Lab in separate node
 containers and then transfers it to Debian, where MAGE is built on top of a
 Debian package.
 
-There is also a version without Mage algorithms for those who want minimal image
+There is also a version without MAGE algorithms for those who want minimal image
 with only Memgraph and Memgraph Lab.
 
 You can start Memgraph Platform with:
 
 ```
-docker run -p 3000:3000 -p 7687:7687 memgraph/memgraph-platform
+docker run -p 3000:3000 -p 7444:7444 -p 7687:7687 --name memgraph memgraph/memgraph-platform
 ```
 
 ### mgconsole
@@ -64,7 +64,7 @@ docker run -p 3000:3000 memgraph/memgraph-platform -c /etc/supervisor/supervisor
 
 ### Memgraph only
 
-Run only the Lab with the following command:
+Run only Memgraph with the following command:
 
 ```
 docker run -p 7687:7687 memgraph/memgraph-platform -c /etc/supervisor/supervisord-memgraph-only.conf
@@ -89,7 +89,7 @@ Memgraph versioning. And the patch version will be followed with any
 update from Mage or Memgraph Lab, or updates on Memgraph Platform itself.
 
 In other words if we have `memgraph-platform:2.2.0`, it means it contains Memgraph
-2.2 version and compatible versions of Mage and Memgraph Lab.
+2.2 version and compatible versions of MAGE and Memgraph Lab.
 
 ### :whale: Docker build
 
