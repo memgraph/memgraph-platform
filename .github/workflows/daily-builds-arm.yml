@@ -49,7 +49,7 @@ on:
 env:
   TARGET_ARCH: "arm64"
   LAB_TAG: ${{ github.event.inputs.lab_tag || 'dev' }}
-  MAGE_TAG: ${{ github.event.inputs.mage_tag || 'main' }}
+  MAGE_TAG: ${{ github.event.inputs.mage_tag || 'add-k-shortest-path' }}
   MEMGRAPH_TAG: ${{ github.event.inputs.memgraph_tag || 'master' }}
   TARGET_OS: "debian-11-arm"
   TOOLCHAIN_VERSION: ${{ github.events.inputs.toolchain_version || 'v4' }}
@@ -119,7 +119,7 @@ jobs:
 
       - name: "Checkout correct versions in submodules"
         run: |
-          cd mage/cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }} && git pull origin ${{ env.MEMGRAPH_TAG }}
+          cd mage/cpp/memgraph && git fetch --all && git checkout ${{ env.MEMGRAPH_TAG }} && git pull origin ${{ env.MEMGRAPH_TAG }}
 
       - name: "Download memgraph package"
         uses: actions/download-artifact@v3
@@ -160,8 +160,8 @@ jobs:
 
       - name: "Checkout correct versions in submodules"
         run: |
-          cd mage && git checkout ${{ env.MAGE_TAG }} && git pull origin ${{ env.MAGE_TAG }}
-          cd cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }} && git pull origin ${{ env.MEMGRAPH_TAG }}
+          cd mage && git fetch --all && git checkout ${{ env.MAGE_TAG }} && git pull origin ${{ env.MAGE_TAG }}
+          cd cpp/memgraph && git fetch --all && git checkout ${{ env.MEMGRAPH_TAG }} && git pull origin ${{ env.MEMGRAPH_TAG }}
 
       - name: "Download memgraph package"
         uses: actions/download-artifact@v3
@@ -202,8 +202,8 @@ jobs:
 
       - name: "Checkout correct versions in submodules"
         run: |
-          cd mage && git checkout ${{ env.MAGE_TAG }} && git pull origin ${{ env.MAGE_TAG }}
-          cd cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }} && git pull origin ${{ env.MEMGRAPH_TAG }}
+          cd mage && git fetch --all && git checkout ${{ env.MAGE_TAG }} && git pull origin ${{ env.MAGE_TAG }}
+          cd cpp/memgraph && git fetch --all && git checkout ${{ env.MEMGRAPH_TAG }} && git pull origin ${{ env.MEMGRAPH_TAG }}
 
       - name: "Download memgraph package"
         uses: actions/download-artifact@v3
@@ -246,9 +246,9 @@ jobs:
 
       - name: "Checkout correct versions in submodules"
         run: |
-          cd lab && git checkout ${{ env.LAB_TAG }} && git pull origin ${{ env.LAB_TAG }}
-          cd ../mage && git checkout ${{ env.MAGE_TAG }} && git pull origin ${{ env.MAGE_TAG }}
-          cd cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }} && git pull origin ${{ env.MEMGRAPH_TAG }}
+          cd lab && git fetch --all && git checkout ${{ env.LAB_TAG }} && git pull origin ${{ env.LAB_TAG }}
+          cd ../mage && git fetch --all && git checkout ${{ env.MAGE_TAG }} && git pull origin ${{ env.MAGE_TAG }}
+          cd cpp/memgraph && git fetch --all && git checkout ${{ env.MEMGRAPH_TAG }} && git pull origin ${{ env.MEMGRAPH_TAG }}
 
       - name: "Download memgraph package"
         uses: actions/download-artifact@v3
@@ -294,9 +294,9 @@ jobs:
 
       - name: "Checkout correct versions in submodules"
         run: |
-          cd lab && git checkout ${{ env.LAB_TAG }} && git pull origin ${{ env.LAB_TAG }}
-          cd ../mage && git checkout ${{ env.MAGE_TAG }} && git pull origin ${{ env.MAGE_TAG }}
-          cd cpp/memgraph && git checkout ${{ env.MEMGRAPH_TAG }} && git pull origin ${{ env.MEMGRAPH_TAG }}
+          cd lab && git fetch --all && git checkout ${{ env.LAB_TAG }} && git pull origin ${{ env.LAB_TAG }}
+          cd ../mage && git fetch --all && git checkout ${{ env.MAGE_TAG }} && git pull origin ${{ env.MAGE_TAG }}
+          cd cpp/memgraph && git fetch --all && git checkout ${{ env.MEMGRAPH_TAG }} && git pull origin ${{ env.MEMGRAPH_TAG }}
 
       - name: "Download memgraph package"
         uses: actions/download-artifact@v3
@@ -344,7 +344,7 @@ jobs:
 
       - name: "Checkout correct versions in submodules"
         run: |
-          cd lab && git checkout ${{ env.LAB_TAG }} && git pull origin ${{ env.LAB_TAG }}
+          cd lab && git fetch --all && git checkout ${{ env.LAB_TAG }} && git pull origin ${{ env.LAB_TAG }}
 
       - name: "Download memgraph package"
         uses: actions/download-artifact@v3
