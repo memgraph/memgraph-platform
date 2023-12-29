@@ -18,8 +18,8 @@
 
 This repository serves as a docker package builder for the Memgraph ecosystem.
 It works by combining
-[MemgraphDB](https://github.com/memgraph/memgraph-platform), [Memgraph
-Lab](https://github.com/memgraph/lab),
+[MemgraphDB](https://github.com/memgraph/memgraph), [Memgraph
+Lab](https://memgraph.com/docs/data-visualization),
 [mgconsole](https://github.com/memgraph/mgconsole) and
 [MAGE](https://github.com/memgraph/mage) into one container and running the
 processes with supervisor. First, it builds Memgraph Lab in separate node
