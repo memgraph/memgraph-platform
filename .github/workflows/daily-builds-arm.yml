@@ -49,8 +49,9 @@ on:
 env:
   TARGET_ARCH: "arm64"
   LAB_TAG: ${{ github.event.inputs.lab_tag || 'dev' }}
-  MAGE_TAG: ${{ github.event.inputs.mage_tag || 'add-k-shortest-path' }}
-  MEMGRAPH_TAG: ${{ github.event.inputs.memgraph_tag || 'master' }}
+  MAGE_TAG: ${{ github.event.inputs.mage_tag || 'main' }}
+  # MAGE_TAG: ${{ github.event.inputs.mage_tag || 'add-k-shortest-path' }}
+  MEMGRAPH_TAG: ${{ github.event.inputs.memgraph_tag || 'v2.13.0' }}
   TARGET_OS: "debian-11-arm"
   TOOLCHAIN_VERSION: ${{ github.events.inputs.toolchain_version || 'v4' }}
   MG_PACKAGE_PATH: "memgraph_debian-11-arm.deb"
