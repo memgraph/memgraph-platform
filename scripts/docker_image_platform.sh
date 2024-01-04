@@ -2,48 +2,91 @@
 set -eo pipefail
 DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
-MGPLAT_ROOT="$DIR/../"
+MGPLAT_ROOT="$DIR/.."
 MGPLAT_GHA_PAT_TOKEN="${MGPLAT_GHA_PAT_TOKEN:-github_personal_access_token}"
+TARGET_ARCH="${TARGET_ARCH:-amd64}"
+MG_PACKAGE_PATH="${MG_PACKAGE_PATH:-$MGPLAT_ROOT/memgraph.deb}"
+MGPLAT_IMAGE="${MGPLAT_IMAGE:-memgraph-platform_$TARGET_ARCH}"
+MGPLAT_TAR="${MGPLAT_TAR:-memgraph-platform_$TARGET_ARCH.tar.gz}"
+CLEANUP="${CLEANUP:-false}"
+
 print_help() {
   echo -e "Builds memgraph platform Docker image."
   echo -e ""
   echo -e "Env vars:"
   echo -e "  MGPLAT_GHA_PAT_TOKEN -> Github PAT token to download Lab's NPM package"
+  echo -e "  TARGET_ARCH -> Target architecture for the build (amd64/arm64)"
+  echo -e "  MG_PACKAGE_PATH -> Path to the memgraph deb pacakage"
+  echo -e "  MGPLAT_IMAGE -> Name for the resulting docker image"
+  echo -e "  MGPLAT_TAR -> Name of the resulting .tar.gz of the image"
+  echo -e "  CLEANUP -> Cleanup docker images created during build, also the tar.gz mage image if --mage-from-tar is passed (true/false)"
   echo -e ""
   echo -e "How to run?"
-  echo -e "  $0 [-h|build src_package_path image_name]"
+  echo -e "  $0 [-h|build --mage-from-tar mage_tar_path|build --mage-from-image mage_image_with_tag|build --mage-from-src|build --no-mage]"
   exit 1
 }
 
-# TODO(gitbuda): An option to build wihout mage.
 build() {
-  src_package="$1"
-  image_name="$2"
-  package_file="$(basename $src_package)"
-  platform_package_file="memgraph-${package_file#memgraph_}"
-  package_file_name="${package_file%.*}"
-  target_arch="${package_file_name#memgraph_}"
-  arch_suffix="${target_arch##*_}"
-  cp "$src_package" \
-     "$MGPLAT_ROOT/$platform_package_file"
-  cd "$MGPLAT_ROOT"
-  docker buildx build --platform="linux/$arch_suffix" -t ${image_name} \
-    --build-arg TARGETARCH="$target_arch" \
+  dockerfile="Dockerfile"
+  case "$1" in
+    --no-mage)
+      dockerfile="memgraph_and_lab.Dockerfile"
+    ;;
+    --mage-from-src)
+      dockerfile="mage_from_src.Dockerfile"
+    ;;
+    --mage-from-image)
+      mage_image=$2
+    ;;
+    --mage-from-tar)
+      docker_load_out=$(docker load < $2)
+      mage_image=$(echo ${docker_load_out#Loaded image:} | tr -d '[:blank:]')
+    ;;
+    *)
+      print_help
+    ;;
+  esac
+  
+  platform_package_file="memgraph-$TARGET_ARCH.deb"
+  cp $MG_PACKAGE_PATH \
+     $MGPLAT_ROOT/$platform_package_file
+  cd $MGPLAT_ROOT
+  docker buildx build \
+    --platform="linux/$TARGET_ARCH" \
+    -t ${MGPLAT_IMAGE} \
     --build-arg NPM_PACKAGE_TOKEN="${MGPLAT_GHA_PAT_TOKEN}" \
-    -f Dockerfile .
+    --build-arg MAGE_IMAGE="${mage_image}" \
+    -f ${dockerfile} .
   mkdir -p "$DIR/dist/docker"
-  docker save ${image_name} | gzip -f > "$DIR/dist/docker/${image_name}.tar.gz"
+
+  mgplat_tar=$MGPLAT_TAR
+  mgplat_tar_ext=${MGPLAT_TAR#*.}
+  if [[ "$mgplat_tar_ext" != "tar.gz" ]]; then
+    mgplat_tar="$MGPLAT_TAR.tar.gz"
+  fi
+  echo -e "Creating $mgplat_tar"
+  docker save $MGPLAT_IMAGE | gzip -f > "$DIR/dist/docker/$mgplat_tar"
+
+  if [[ "$CLEANUP" == "true" ]]; then
+    docker image rm $MGPLAT_IMAGE
+    if [[ "$1" == "--mage-from-tar" || "$1" == "--mage-from-image" ]]; then
+      docker image rm $mage_image
+    fi
+    if [[ "$1" == "--mage-from-tar" ]]; then
+      rm $2
+    fi
+  fi
 }
 
-if [ "$#" == 0 ]; then
+if [[ "$#" -eq 0 ]]; then
   print_help
 else
   case "$1" in
     build)
-      if [ "$#" -ne 3 ]; then
+      if [[ "$#" -lt 2 || "$#" -gt 3 ]]; then
         print_help
       fi
-      build "$2" "$3"
+      build $2 $3
     ;;
     *)
       print_help

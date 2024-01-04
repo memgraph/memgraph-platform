@@ -1,0 +1,368 @@
+name: Daily builds for arm64
+
+on:
+  #NOTE: Remove pull_request: before merge
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        type: choice
+        description: "Build type"
+        default: 'RelWithDebInfo'
+        options:
+          - Release
+          - RelWithDebInfo
+          - Debug
+      toolchain_version:
+        type: choice
+        description: "Toolchain version"
+        default: 'v4'
+        options:
+          - v4
+          - v5
+      memgraph_tag:
+        description: "Memgraph version (choose master to use the latest source)"
+        default: 'master'
+      mage_tag:
+        description: "Mage version (choose main to use the latest source)"
+        default: 'main'
+      lab_tag:
+        description: "Lab version (choose dev to use the latest source)"
+        default: 'dev'
+      build_mage:
+        description: "Build full mage image"
+        type: boolean
+        default: true
+      build_mage_no_ml:
+        description: "Build mage image without ML libraries"
+        type: boolean
+        default: true
+      build_memgraph_platform:
+        description: "Build memgraph plaftorm image"
+        type: boolean
+        default: true
+      build_memgraph_platform_without_mage:
+        description: "Build memgraph plaftorm without mage"
+        type: boolean
+        default: true
+
+env:
+  TARGET_ARCH: "arm64"
+  LAB_TAG: ${{ github.event.inputs.lab_tag || 'dev' }}
+  MAGE_TAG: ${{ github.event.inputs.mage_tag || 'main' }}
+  # MAGE_TAG: ${{ github.event.inputs.mage_tag || 'add-k-shortest-path' }}
+  MEMGRAPH_TAG: ${{ github.event.inputs.memgraph_tag || 'v2.13.0' }}
+  TARGET_OS: "debian-11-arm"
+  TOOLCHAIN_VERSION: ${{ github.events.inputs.toolchain_version || 'v4' }}
+  MG_PACKAGE_PATH: "memgraph_debian-11-arm.deb"
+  MEMGRAPH_IMAGE: "memgraph/memgraph:${{ github.run_id }}"
+  MEMGRAPH_TAR: "memgraph_arm64.tar.gz"
+  MAGE_IMAGE: "memgraph/memgraph-mage:${{ github.run_id }}"
+  MAGE_TAR: "mage_arm64.tar.gz"
+  MAGE_NO_ML_IMAGE: "memgraph/memgraph-mage:${{ github.run_id }}-no-ml"
+  MAGE_NO_ML_TAR: "mage_no-ml_arm64.tar.gz"
+  MGPLAT_IMAGE: "memgraph/memgraph-platform:${{ github.run_id }}"
+  MGPLAT_TAR: "memgraph-platform_arm64.tar.gz"
+  MGPLAT_NO_MAGE_IMAGE: "memgraph/memgraph-platform:${{ github.run_id }}-no-mage"
+  MGPLAT_NO_MAGE_TAR: "memgraph-platform_no-mage_arm64.tar.gz"
+  MGPLAT_NO_ML_IMAGE: "memgraph/memgraph-platform:${{ github.run_id }}-no-ml"
+  MGPLAT_NO_ML_TAR: "memgraph-platform_no-ml_arm64.tar.gz"
+  MGPLAT_GHA_PAT_TOKEN: ${{ secrets.PAT }}
+
+jobs:
+  build_memgraph:
+    name: "Build memgraph"
+    runs-on: [self-hosted, Docker, ARM64]
+    steps:
+      - name: "Clean the working directory"
+        run: rm -rf *
+
+      - name: "Checkout repository and submodules"
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.PAT }}
+
+      - name: "Build memgraph"
+        run: |
+          ./scripts/pack_memgraph_via_docker.sh pack
+          ./scripts/pack_memgraph_via_docker.sh copy_package
+          ./scripts/pack_memgraph_via_docker.sh cleanup
+        env:
+          MGPLAT_CNT_IMAGE: "memgraph/memgraph-builder:${{ env.TOOLCHAIN_VERSION }}_${{ env.TARGET_OS }}"
+          MGPLAT_CNT_NAME: "mgbuilder_${{ env.TARGET_OS }}"
+          MGPLAT_CNT_MG_ROOT: "/platform/mage/cpp/memgraph"
+          MGPLAT_MG_TAG: ${{ env.MEMGRAPH_TAG }}
+          MGPLAT_MG_BUILD_TYPE: ${{ github.event.inputs.build_type || 'RelWithDebInfo' }}
+
+      - name: "Upload memgraph binary"
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.MG_PACKAGE_PATH }}
+          path: scripts/dist/package/memgraph*.deb
+
+  build_memgraph_image:
+    if: ${{ github.event.inputs.build_memgraph_image != 'false' }}
+    name: "Build memgraph image"
+    needs: [build_memgraph]
+    runs-on: [self-hosted, Docker, ARM64]
+    steps:
+      - name: "Clean the working directory"
+        run: rm -rf *
+
+      - name: "Checkout repository and submodules"
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.PAT }}
+
+      - name: "Checkout correct versions in submodules"
+        run: |
+          cd mage/cpp/memgraph && git fetch --all && git checkout ${{ env.MEMGRAPH_TAG }} && git pull origin ${{ env.MEMGRAPH_TAG }}
+
+      - name: "Download memgraph package"
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.MG_PACKAGE_PATH }}
+
+      - name: "Build memgraph image"
+        run: |
+          mv memgraph_*.deb ${{ env.MG_PACKAGE_PATH }}
+          ./scripts/docker_image_memgraph.sh build
+        env:
+          CLEANUP: "true"
+
+      - name: "Upload memgraph docker image"
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.MEMGRAPH_TAR }}
+          path: scripts/dist/docker/${{ env.MEMGRAPH_TAR }}
+
+  build_mage:
+    if: ${{ github.event.inputs.build_mage != 'false' }}
+    name: "Build mage"
+    needs: [build_memgraph]
+    runs-on: [self-hosted, Docker, ARM64]
+    steps:
+      - name: "Clean the working directory"
+        run: rm -rf *
+
+      - name: "Checkout repository and submodules"
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.PAT }}
+
+      - name: "Unlock keychain for current session" # Required beacuse ARM builds run on macos
+        run: security -v unlock-keychain -p ${{ secrets.SELF_HOSTED_RUNNER_PASSWORD }} ~/Library/Keychains/login.keychain-db
+
+      - name: "Checkout correct versions in submodules"
+        run: |
+          cd mage && git fetch --all && git checkout ${{ env.MAGE_TAG }} && git pull origin ${{ env.MAGE_TAG }}
+          cd cpp/memgraph && git fetch --all && git checkout ${{ env.MEMGRAPH_TAG }} && git pull origin ${{ env.MEMGRAPH_TAG }}
+
+      - name: "Download memgraph package"
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.MG_PACKAGE_PATH }}
+
+      - name: "Build mage"
+        run: |
+          mv memgraph_*.deb ${{ env.MG_PACKAGE_PATH }}
+          ./scripts/docker_image_mage.sh build
+        env:
+          CLEANUP: "true"
+
+      - name: "Upload mage docker image"
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.MAGE_TAR }}
+          path: scripts/dist/docker/${{ env.MAGE_TAR }}
+
+  build_mage_no_ml:
+    if: ${{ github.event.inputs.build_mage_no_ml != 'false' }}
+    name: "Build mage without ML libraries"
+    needs: [build_memgraph]
+    runs-on: [self-hosted, Docker, ARM64]
+    steps:
+      - name: "Clean the working directory"
+        run: rm -rf *
+
+      - name: "Checkout repository and submodules"
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.PAT }}
+
+      - name: "Unlock keychain for current session" # Required beacuse ARM builds run on macos
+        run: security -v unlock-keychain -p ${{ secrets.SELF_HOSTED_RUNNER_PASSWORD }} ~/Library/Keychains/login.keychain-db
+
+      - name: "Checkout correct versions in submodules"
+        run: |
+          cd mage && git fetch --all && git checkout ${{ env.MAGE_TAG }} && git pull origin ${{ env.MAGE_TAG }}
+          cd cpp/memgraph && git fetch --all && git checkout ${{ env.MEMGRAPH_TAG }} && git pull origin ${{ env.MEMGRAPH_TAG }}
+
+      - name: "Download memgraph package"
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.MG_PACKAGE_PATH }}
+
+      - name: "Build mage"
+        run: |
+          mv memgraph_*.deb ${{ env.MG_PACKAGE_PATH }}
+          ./scripts/docker_image_mage.sh build --no-ml
+        env:
+          MAGE_IMAGE: ${{ env.MAGE_NO_ML_IMAGE }}
+          MAGE_TAR: ${{ env.MAGE_NO_ML_TAR }}
+          CLEANUP: "true"
+
+      - name: "Upload mage docker image"
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.MAGE_NO_ML_TAR }}
+          path: scripts/dist/docker/${{ env.MAGE_NO_ML_TAR }}
+
+  build_memgraph_platform:
+    if: ${{ github.event.inputs.build_memgraph_platform != 'false' }}
+    name: "Build memgraph plaftorm"
+    needs: [build_memgraph, build_mage]
+    runs-on: [self-hosted, Docker, ARM64]
+    steps:
+      - name: "Clean the working directory"
+        run: rm -rf *
+
+      - name: "Checkout repository and submodules"
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.PAT }}
+
+      - name: "Unlock keychain for current session" # Required beacuse ARM builds run on macos
+        run: security -v unlock-keychain -p ${{ secrets.SELF_HOSTED_RUNNER_PASSWORD }} ~/Library/Keychains/login.keychain-db
+
+      - name: "Checkout correct versions in submodules"
+        run: |
+          cd lab && git fetch --all && git checkout ${{ env.LAB_TAG }} && git pull origin ${{ env.LAB_TAG }}
+          cd ../mage && git fetch --all && git checkout ${{ env.MAGE_TAG }} && git pull origin ${{ env.MAGE_TAG }}
+          cd cpp/memgraph && git fetch --all && git checkout ${{ env.MEMGRAPH_TAG }} && git pull origin ${{ env.MEMGRAPH_TAG }}
+
+      - name: "Download memgraph package"
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.MG_PACKAGE_PATH }}
+
+      - name: "Download mage package"
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.MAGE_TAR }}
+
+      - name: "Build memgraph platform"
+        run: |
+          mv memgraph_*.deb ${{ env.MG_PACKAGE_PATH }}
+          ./scripts/docker_image_platform.sh build --mage-from-tar ${{ env.MAGE_TAR }}
+        env:
+          CLEANUP: "true"
+
+      - name: "Upload memgraph platform docker image"
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.MGPLAT_TAR }}
+          path: scripts/dist/docker/${{ env.MGPLAT_TAR }}
+
+  build_memgraph_platform_no_ml:
+    if: ${{ github.event.inputs.build_memgraph_platform != 'false' }}
+    name: "Build memgraph plaftorm without ML libraries"
+    needs: [build_memgraph, build_mage_no_ml]
+    runs-on: [self-hosted, Docker, ARM64]
+    steps:
+      - name: "Clean the working directory"
+        run: rm -rf *
+
+      - name: "Checkout repository and submodules"
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.PAT }}
+
+      - name: "Unlock keychain for current session" # Required beacuse ARM builds run on macos
+        run: security -v unlock-keychain -p ${{ secrets.SELF_HOSTED_RUNNER_PASSWORD }} ~/Library/Keychains/login.keychain-db
+
+      - name: "Checkout correct versions in submodules"
+        run: |
+          cd lab && git fetch --all && git checkout ${{ env.LAB_TAG }} && git pull origin ${{ env.LAB_TAG }}
+          cd ../mage && git fetch --all && git checkout ${{ env.MAGE_TAG }} && git pull origin ${{ env.MAGE_TAG }}
+          cd cpp/memgraph && git fetch --all && git checkout ${{ env.MEMGRAPH_TAG }} && git pull origin ${{ env.MEMGRAPH_TAG }}
+
+      - name: "Download memgraph package"
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.MG_PACKAGE_PATH }}
+
+      - name: "Download mage package"
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.MAGE_NO_ML_TAR }}
+
+      - name: "Build memgraph platform"
+        run: |
+          mv memgraph_*.deb ${{ env.MG_PACKAGE_PATH }}
+          ./scripts/docker_image_platform.sh build --mage-from-tar ${{ env.MAGE_NO_ML_TAR }}
+        env:
+          MGPLAT_IMAGE: ${{ env.MGPLAT_NO_ML_IMAGE }}
+          MGPLAT_TAR: ${{ env.MGPLAT_NO_ML_TAR }}
+          CLEANUP: "true"
+
+      - name: "Upload memgraph platform docker image"
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.MGPLAT_NO_ML_TAR }}
+          path: scripts/dist/docker/${{ env.MGPLAT_NO_ML_TAR }}
+
+  build_memgraph_platform_without_mage:
+    if: ${{ github.event.inputs.build_memgraph_platform_without_mage != 'false' }}
+    name: "Build memgraph plaftorm without mage"
+    needs: [build_memgraph]
+    runs-on: [self-hosted, Docker, ARM64]
+    steps:
+      - name: "Clean the working directory"
+        run: rm -rf *
+
+      - name: "Checkout repository and submodules"
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.PAT }}
+
+      - name: "Unlock keychain for current session" # Required beacuse ARM builds run on macos
+        run: security -v unlock-keychain -p ${{ secrets.SELF_HOSTED_RUNNER_PASSWORD }} ~/Library/Keychains/login.keychain-db
+
+      - name: "Checkout correct versions in submodules"
+        run: |
+          cd lab && git fetch --all && git checkout ${{ env.LAB_TAG }} && git pull origin ${{ env.LAB_TAG }}
+
+      - name: "Download memgraph package"
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.MG_PACKAGE_PATH }}
+
+      - name: "Build memgraph platform"
+        run: |
+          mv memgraph_*.deb ${{ env.MG_PACKAGE_PATH }}
+          ./scripts/docker_image_platform.sh build --no-mage
+        env:
+          MGPLAT_IMAGE: ${{ env.MGPLAT_NO_MAGE_IMAGE }}
+          MGPLAT_TAR: ${{ env.MGPLAT_NO_MAGE_TAR }}
+          CLEANUP: "true"
+
+      - name: "Upload memgraph platform docker image"
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.MGPLAT_NO_MAGE_TAR }}
+          path: scripts/dist/docker/${{ env.MGPLAT_NO_MAGE_TAR }}
