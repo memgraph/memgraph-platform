@@ -112,13 +112,17 @@ RUN pip3 install --default-timeout=1000 networkx==2.4 numpy==1.21.4 scipy==1.7.3
 #copy modules
 COPY --from=mage-dev /usr/lib/memgraph/query_modules/ /usr/lib/memgraph/query_modules/
 
+# rm modules with issues (temporary)
+RUN rm /usr/lib/memgraph/query_modules/node_classification.py \
+    && rm /usr/lib/memgraph/query_modules/link_prediction.py \
+    && rm /usr/lib/memgraph/query_modules/text.so
+
 #copy python build
 COPY --from=mage-dev /usr/local/lib/python${PY_VERSION}/ /usr/local/lib/python${PY_VERSION}/
 
 COPY memgraph-${TARGETARCH}.deb .
 
-RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb && rm /usr/lib/memgraph/query_modules/schema.so  \
-&& rm /usr/lib/memgraph/query_modules/example_cpp.so
+RUN dpkg -i memgraph-${TARGETARCH}.deb && rm memgraph-${TARGETARCH}.deb
 
 RUN rm -rf /mage \
     && export PATH="/usr/local/lib/python${PY_VERSION}:${PATH}" \
