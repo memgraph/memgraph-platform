@@ -78,4 +78,5 @@ check_running_container "memgraph-mage"
 # check_port_availability 7444
 
 # Run compose
+cd $MGPLAT_DIR
 $CMD_PREFIX/docker compose up -d
