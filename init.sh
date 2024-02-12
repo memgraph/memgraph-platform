@@ -91,4 +91,4 @@ check_running_container "memgraph-mage"
 
 # Run compose
 cd $MGPLAT_DIR
-${CMD_PREFIX}docker compose up -d
+${CMD_PREFIX}docker compose up
