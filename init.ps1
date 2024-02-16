@@ -57,7 +57,7 @@ bold "Checking for requirements on this machine:"
 $check_deps = $true
 
 Write-Output $check_deps
-if (check_cmd_dep "Invoke-WebRequest") {
+if (-not (check_cmd_dep "Invoke-WebRequest")) {
   $check_deps = $false
 }
 Write-Output $check_deps
