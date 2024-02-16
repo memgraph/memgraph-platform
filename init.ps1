@@ -42,7 +42,7 @@ function check_cmd_dep {
     )
     $check_cmd = Get-Command $cmd -ErrorAction SilentlyContinue
     if ($check_cmd) {
-        msg_out "$cmd @CHECK_UNICODE"
+        msg_out "$cmd "@CHECK_UNICODE
         return $true
     } else {
         msg_out "$cmd $(bold "x")"
