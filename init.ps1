@@ -33,7 +33,11 @@ function check_cmd_dep {
     Param(
         [string]$cmd
     )
-    $check_cmd = Get-Command $cmd -ErrorAction SilentlyContinue
+    if ($cmd -eq "docker compose") {
+      $check_cmd = docker compose 2>$null
+    } else {
+      $check_cmd = Get-Command $cmd 2>$null
+    }
     if ($check_cmd) {
         bold "$cmd - found"
         return $true
