@@ -42,10 +42,10 @@ function check_cmd_dep {
     )
     $check_cmd = Get-Command $cmd -ErrorAction SilentlyContinue
     if ($check_cmd) {
-        msg_out "$cmd $(bold "YES")"
+        msg_out "$(bold "$cmd YES")"
         return $true
     } else {
-        msg_out "$cmd $(bold "NO")"
+        msg_out "$(bold "$cmd NO")"
         return $false
     }
 }
