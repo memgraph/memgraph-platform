@@ -3,13 +3,6 @@
 # Set strict mode
 Set-StrictMode -Version Latest
 
-# Define Unicode characters
-$CHECK_UNICODE=@{
-  Object = [Char]8730
-  ForegroundColor = 'Green'
-  NoNewLine = $true
-  }
-
 # Function to print messages
 function msg_out {
     Param(
@@ -42,10 +35,10 @@ function check_cmd_dep {
     )
     $check_cmd = Get-Command $cmd -ErrorAction SilentlyContinue
     if ($check_cmd) {
-        Write-Output $cmd @CHECK_UNICODE
+        bold "$cmd - found"
         return $true
     } else {
-        msg_out "$cmd $(bold "x")"
+        bold "$cmd - missing"
         return $false
     }
 }
