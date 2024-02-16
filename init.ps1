@@ -42,10 +42,10 @@ function check_cmd_dep {
     )
     $check_cmd = Get-Command $cmd -ErrorAction SilentlyContinue
     if ($check_cmd) {
-        msg_out "$cmd "@CHECK_UNICODE
+        msg_out "$cmd $(bold "YES")"
         return $true
     } else {
-        msg_out "$cmd $(bold "x")"
+        msg_out "$cmd $(bold "NO")"
         return $false
     }
 }
@@ -55,18 +55,9 @@ bold "Checking for requirements on this machine:"
 $check_deps = $true
 $download_cmd = ""
 
-if (check_cmd_dep "curl") {
-    $download_cmd = "curl"
-} elseif (check_cmd_dep "Invoke-WebRequest") {
-    $download_cmd = "Invoke-WebRequest"
-} else {
-    $check_deps = $false
-    err_out "you need to have 'curl' or 'Invoke-WebRequest' installed"
-}
-
+check_cmd_dep "Invoke-WebRequest" -or ($check_deps = $false)
 check_cmd_dep "docker" -or ($check_deps = $false)
 check_cmd_dep "docker-compose" -or ($check_deps = $false)
-check_cmd_dep "Select-String" -or ($check_deps = $false)
 check_cmd_dep "mkdir" -or ($check_deps = $false)
 check_cmd_dep "Get-Location" -or ($check_deps = $false)
 
@@ -88,12 +79,7 @@ if (Test-Path $MGPLAT_COMPOSE_PATH) {
 
 # Download compose file
 msg_out "$(bold "Downloading docker compose file to:") $MGPLAT_COMPOSE_PATH"
-if ($download_cmd -eq "curl") {
-    curl $DOCKER_COMPOSE_URL -o "$MGPLAT_COMPOSE_PATH"
-} else {
-    Invoke-WebRequest -Uri $DOCKER_COMPOSE_URL -OutFile "$MGPLAT_COMPOSE_PATH"
-}
-
+Invoke-WebRequest -Uri $DOCKER_COMPOSE_URL -OutFile "$MGPLAT_COMPOSE_PATH"
 if (-not $?) {
     err_out "Something went wrong when downloading docker-compose.yml from $DOCKER_COMPOSE_URL"
 }
