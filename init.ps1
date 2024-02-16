@@ -1,6 +1,12 @@
 # Set strict mode
 Set-StrictMode -Version Latest
 
+$CheckMark = @{
+  Object = [Char]8730
+  ForegroundColor = 'Green'
+  NoNewLine = $false
+  }
+
 # Function to check command dependencies
 function check_cmd_dep {
     Param(
@@ -12,10 +18,12 @@ function check_cmd_dep {
       $check_cmd = Get-Command $cmd 2>$null
     }
     if ($check_cmd) {
-        Write-Host "$cmd FOUND" -ForegroundColor Green
+        Write-Host "$cmd " -NoNewLine
+        Write-Host @CheckMark
         return $true
     } else {
-        Write-Host "$cmd MISSING" -ForegroundColor Red
+        Write-Host "$cmd "
+        Write-Host "X" -ForegroundColor Red
         return $false
     }
 }
