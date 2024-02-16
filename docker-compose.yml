@@ -2,7 +2,7 @@ version: "3"
 
 services:
   memgraph:
-    image: memgraph/memgraph-mage:latest
+    image: docker.io/memgraph/memgraph-mage:latest
     container_name: memgraph-mage
     ports:
       - "7687:7687"
@@ -10,7 +10,7 @@ services:
     command: ["--log-level=TRACE"]
 
   lab:
-    image: memgraph/lab:latest
+    image: docker.io/memgraph/lab:latest
     container_name: memgraph-lab
     ports:
       - "3000:3000"
