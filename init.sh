@@ -57,7 +57,6 @@ else
 fi
 check_cmd_dep "docker" || check_deps=0
 check_cmd_dep "docker compose" || check_deps=0
-check_cmd_dep "grep" || check_deps=0
 check_cmd_dep "mkdir" || check_deps=0
 check_cmd_dep "pwd" || check_deps=0
 if [ "$check_deps" -eq 0 ]; then
