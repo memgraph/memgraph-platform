@@ -42,10 +42,10 @@ function check_cmd_dep {
     )
     $check_cmd = Get-Command $cmd -ErrorAction SilentlyContinue
     if ($check_cmd) {
-        msg_out "$(bold "$cmd YES")"
+        Write-Output $cmd @CHECK_UNICODE
         return $true
     } else {
-        msg_out "$(bold "$cmd NO")"
+        msg_out "$cmd $(bold "x")"
         return $false
     }
 }
@@ -94,4 +94,4 @@ if (-not $?) {
 # Run compose
 Set-Location $MGPLAT_DIR
 msg_out "$(bold "Spinning up memgraph lab and memgraph with mage using docker compose file from:") $MGPLAT_COMPOSE_PATH"
-docker-compose up
+docker compose up
