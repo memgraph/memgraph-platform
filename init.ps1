@@ -4,8 +4,11 @@
 Set-StrictMode -Version Latest
 
 # Define Unicode characters
-$CHECK_UNICODE="\xE2\x9C\x94"
-$FAIL_UNICODE="\033[1mx\033[0m"
+$CHECK_UNICODE=@{
+  Object = [Char]8730
+  ForegroundColor = 'Green'
+  NoNewLine = $true
+  }
 
 # Function to print messages
 function msg_out {
@@ -20,7 +23,7 @@ function err_out {
     Param(
         [string]$message
     )
-    Write-Error "ERROR: $message"
+    msg_out "ERROR: $message"
     exit 1
 }
 
@@ -39,7 +42,7 @@ function check_cmd_dep {
     )
     $check_cmd = Get-Command $cmd -ErrorAction SilentlyContinue
     if ($check_cmd) {
-        msg_out "$cmd $CHECK_UNICODE"
+        msg_out "$cmd @CHECK_UNICODE"
         return $true
     } else {
         msg_out "$cmd $(bold "x")"
