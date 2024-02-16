@@ -64,5 +64,8 @@ if (-not $?) {
 
 # Run compose
 Set-Location $MGPLAT_DIR
+Write-Host "Pulling memgraph/lab:latest and memgraph/memgraph-mage:latest" -ForegroundColor Yellow
+docker pull memgraph/lab:latest
+docker pull memgraph/memgraph-mage:latest
 Write-Host "Spinning up memgraph lab and memgraph with mage using docker compose file from: $MGPLAT_COMPOSE_PATH" -ForegroundColor Yellow
 docker compose up
