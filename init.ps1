@@ -61,6 +61,8 @@ check_cmd_dep "docker-compose" -or ($check_deps = $false)
 check_cmd_dep "mkdir" -or ($check_deps = $false)
 check_cmd_dep "Get-Location" -or ($check_deps = $false)
 
+Write-Output $check_deps
+
 if (-not $check_deps) {
     err_out "All requirements must be satisfied to run this script!"
 }
