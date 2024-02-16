@@ -42,9 +42,11 @@ function check_cmd_dep {
     )
     $check_cmd = Get-Command $cmd -ErrorAction SilentlyContinue
     if ($check_cmd) {
+        Write-Host "GETCOMMAND IS TRUE"
         msg_out "$cmd $(bold "YES")"
         return $true
     } else {
+        Write-Host "GETCOMMAND IS FALSE"
         msg_out "$cmd $(bold "NO")"
         return $false
     }
@@ -55,7 +57,9 @@ bold "Checking for requirements on this machine:"
 $check_deps = $true
 
 Write-Output $check_deps
-check_cmd_dep "Invoke-WebRequest" -or ($check_deps = $false)
+if $(check_cmd_dep "Invoke-WebRequest") {
+  $check_deps = $false
+}
 Write-Output $check_deps
 check_cmd_dep "docker" -or ($check_deps = $false)
 Write-Output $check_deps
