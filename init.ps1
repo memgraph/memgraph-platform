@@ -12,10 +12,10 @@ function check_cmd_dep {
       $check_cmd = Get-Command $cmd 2>$null
     }
     if ($check_cmd) {
-        Write-Host "$cmd -- FOUND" -ForegroundColor Green
+        Write-Host "$cmd FOUND" -ForegroundColor Green
         return $true
     } else {
-        Write-Host "$cmd -- MISSING" -ForegroundColor Red
+        Write-Host "$cmd MISSING" -ForegroundColor Red
         return $false
     }
 }
