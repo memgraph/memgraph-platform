@@ -53,14 +53,17 @@ function check_cmd_dep {
 # Check required commands
 bold "Checking for requirements on this machine:"
 $check_deps = $true
-$download_cmd = ""
 
+Write-Output $check_deps
 check_cmd_dep "Invoke-WebRequest" -or ($check_deps = $false)
+Write-Output $check_deps
 check_cmd_dep "docker" -or ($check_deps = $false)
+Write-Output $check_deps
 check_cmd_dep "docker-compose" -or ($check_deps = $false)
+Write-Output $check_deps
 check_cmd_dep "mkdir" -or ($check_deps = $false)
+Write-Output $check_deps
 check_cmd_dep "Get-Location" -or ($check_deps = $false)
-
 Write-Output $check_deps
 
 if (-not $check_deps) {
