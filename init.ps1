@@ -1,7 +1,7 @@
 # Set strict mode
 Set-StrictMode -Version Latest
 
-$CheckMark = @{
+$CHECKMARK_SYMBOL = @{
   Object = [Char]8730
   ForegroundColor = 'Green'
   NoNewLine = $false
@@ -19,7 +19,7 @@ function check_cmd_dep {
     }
     if ($check_cmd) {
         Write-Host "$cmd " -NoNewLine
-        Write-Host @CheckMark
+        Write-Host @CHECKMARK_SYMBOL
         return $true
     } else {
         Write-Host "$cmd "
