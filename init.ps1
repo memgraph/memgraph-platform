@@ -54,7 +54,7 @@ if (-not $check_deps) {
 $DIR = Get-Location
 $MGPLAT_DIR = "$DIR\memgraph-platform"
 $MGPLAT_COMPOSE_PATH = "$MGPLAT_DIR\docker-compose.yml"
-$DOCKER_COMPOSE_URL = "https://raw.githubusercontent.com/memgraph/memgraph-platform/add-docker-compose/docker-compose.yml"
+$DOCKER_COMPOSE_URL = "https://raw.githubusercontent.com/memgraph/memgraph-platform/main/docker-compose.yml"
 
 # Check if compose file already exists
 if (Test-Path $MGPLAT_COMPOSE_PATH) {
