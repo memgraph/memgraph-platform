@@ -58,6 +58,13 @@ Here are the Docker images which can be built from this repository:
 
 The last Memgraph Platform image published on Docker Hub is 2.14.1. In the future, from Memgraph 2.15, **Memgraph Platform image will no longer be published**, and [Docker Compose](./docker-compose.yml) containing Memgraph MAGE and Lab services will replace it.
 
+
+You can start Memgraph Platform with:
+
+```
+docker run -p 3000:3000 -p 7444:7444 -p 7687:7687 --name memgraph memgraph/memgraph-platform
+```
+
 ### How to start mgconsole
 
 Start `mgconsole` with:
@@ -93,11 +100,6 @@ Run only Memgraph with the following command:
 docker run -p 7687:7687 memgraph/memgraph-platform -c /etc/supervisor/supervisord-memgraph-only.conf
 ```
 
-You can start Memgraph Platform < 2.15 with:
-
-```
-docker run -p 3000:3000 -p 7444:7444 -p 7687:7687 --name memgraph memgraph/memgraph-platform
-```
 
 ### :hourglass: Versioning
 
