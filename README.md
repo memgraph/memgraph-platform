@@ -30,7 +30,7 @@ curl https://install.memgraph.com | sh
 iwr https://windows.memgraph.com | iex
 ```
 
-By running `docker ps`, you'll notice two containers running and if you head over to `localhost:3000`, Quick Connect in Memgraph Lab will detect Memgraph running on your system. Check out the basic [Docker Compose file](./docker-compose.yml) and update it to fit your needs.
+By running `docker ps`, you'll notice `memgraph-mage` and `memgraph-lab` containers running. If you head over to `localhost:3000`, Quick Connect in Memgraph Lab will detect Memgraph running on your system. Check out the basic [Docker Compose file](./docker-compose.yml) and update it to fit your needs.
 
 To start `mgconsole`, run the following command:
 
