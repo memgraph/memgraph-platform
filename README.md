@@ -1,7 +1,7 @@
 <p align="center">
   <img src="https://uploads-ssl.webflow.com/5e7ceb09657a69bdab054b3a/5e7ceb09657a6937ab054bba_Black_Original%20_Logo.png" width="300"/>
 </p>
-<p align="center">Download everything you need to run Memgraph in one Docker image.</p>
+<p align="center">One command to run it all.</p>
 
 <p align="center">
   <a href="https://github.com/memgraph/memgraph-platform/blob/main/LICENSE">
@@ -14,20 +14,50 @@
   </a>
 </p>
 
+## :runner: Quick start
+
+With Docker running on your system and ports 7687, 7444 and 3000 available, run one of the following commands to download Memgraph Platform Docker Compose file and start Memgraph and Memgraph Lab services:
+
+**Linux/macOS**
+
+```
+curl https://install.memgraph.com | sh
+```
+
+**Windows**
+
+```
+iwr https://windows.memgraph.com | iex
+```
+
+By running `docker ps`, you'll notice `memgraph-mage` and `memgraph-lab` containers running. If you head over to `localhost:3000`, Quick Connect in Memgraph Lab will detect Memgraph running on your system. Check out the basic [Docker Compose file](./docker-compose.yml) and update it to fit your needs.
+
+To start `mgconsole`, run the following command:
+
+```
+# with `docker ps` get the Memgraph container id 
+docker exec -ti <container-id> mgconsole
+```
+
 ## :clipboard: Description
 
-This repository serves as a docker package builder for the Memgraph ecosystem.
-It works by combining
-[MemgraphDB](https://github.com/memgraph/memgraph), [Memgraph
-Lab](https://memgraph.com/docs/data-visualization),
-[mgconsole](https://github.com/memgraph/mgconsole) and
-[MAGE](https://github.com/memgraph/mage) into one container and running the
-processes with supervisor. First, it builds Memgraph Lab in separate node
-containers and then transfers it to Debian, where MAGE is built on top of a
-Debian package.
+This repository serves as a Docker package builder for the Memgraph ecosystem, consisting of:
+- [MemgraphDB](https://github.com/memgraph/memgraph)
+- [mgconsole](https://github.com/memgraph/mgconsole)
+- [MAGE](https://github.com/memgraph/mage)
+- [Memgraph Lab](https://memgraph.com/docs/data-visualization)
 
-There is also a version without MAGE algorithms for those who want minimal image
-with only Memgraph and Memgraph Lab.
+Here are the Docker images which can be built from this repository:
+- [Memgraph Docker image](https://hub.docker.com/r/memgraph/memgraph)
+- [Memgraph MAGE Docker image](https://hub.docker.com/r/memgraph/memgraph-mage)
+- [Memgraph Lab Docker image](https://hub.docker.com/r/memgraph/lab)
+- ([*deprecated*](#exclamation-deprecated-memgraph-platform-docker-image)) [Memgraph Platform Docker image](https://hub.docker.com/r/memgraph/memgraph-platform) 
+
+
+## :exclamation: (Deprecated) Memgraph Platform Docker image
+
+The last Memgraph Platform image published on Docker Hub is 2.14.1. In the future, from Memgraph 2.15, **Memgraph Platform image will no longer be published**, and [Docker Compose](./docker-compose.yml) containing Memgraph MAGE and Lab services will replace it.
+
 
 You can start Memgraph Platform with:
 
@@ -35,7 +65,7 @@ You can start Memgraph Platform with:
 docker run -p 3000:3000 -p 7444:7444 -p 7687:7687 --name memgraph memgraph/memgraph-platform
 ```
 
-### mgconsole
+### How to start mgconsole
 
 Start `mgconsole` with:
 
@@ -54,7 +84,7 @@ sure to provide the following argument `--host host.docker.internal`:
 docker run -ti --entrypoint=mgconsole memgraph/memgraph-platform --host host.docker.internal
 ```
 
-### Lab only
+### How to start only Lab
 
 Run only the Lab with the following command:
 
@@ -62,7 +92,7 @@ Run only the Lab with the following command:
 docker run -p 3000:3000 memgraph/memgraph-platform -c /etc/supervisor/supervisord-lab-only.conf
 ```
 
-### Memgraph only
+### How to start only Memgraph
 
 Run only Memgraph with the following command:
 
@@ -70,26 +100,16 @@ Run only Memgraph with the following command:
 docker run -p 7687:7687 memgraph/memgraph-platform -c /etc/supervisor/supervisord-memgraph-only.conf
 ```
 
-## :hourglass: Versioning
 
-New versioning is transparent in the sense that we explicitly state which
+### :hourglass: Versioning
+
+The versioning is transparent in the sense that we explicitly state which
 version of software is included, and it looks like this:
 
 `memgraph/memgraph-platform:2.5.0-memgraph2.4-lab2.2.2-mage1.3.5`
 
 and just by looking at each of the Memgraph Platform version, you can know which
 versions of software it contains without looking at details in release notes.
-
-### :no_entry_sign: Old (Deprecated)
-
-This versioning is deprecated and was used until v2.4.0 Memgraph Platform.
-
-We have decided that major and minor versions of Memgraph Platform will follow
-Memgraph versioning. And the patch version will be followed with any
-update from Mage or Memgraph Lab, or updates on Memgraph Platform itself.
-
-In other words if we have `memgraph-platform:2.2.0`, it means it contains Memgraph
-2.2 version and compatible versions of MAGE and Memgraph Lab.
 
 ### :whale: Docker build
 
