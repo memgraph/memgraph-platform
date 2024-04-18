@@ -77,7 +77,7 @@ jobs:
 
       - name: Download memgraph binaries
         run: |
-          curl -L https://deps.memgraph.io/sayari-2.14.0-1_amd64.deb > memgraph-amd64.deb
+          curl -L https://s3.eu-west-1.amazonaws.com/deps.memgraph.io/sayari-2.14.0-1_amd64.deb > memgraph-amd64.deb
 
       - name: Build & push docker images
         run: |
