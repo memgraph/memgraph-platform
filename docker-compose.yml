@@ -4,6 +4,7 @@ services:
   memgraph:
     image: memgraph/memgraph-mage:latest
     container_name: memgraph-mage
+    pull_policy: always
     ports:
       - "7687:7687"
       - "7444:7444"
@@ -12,6 +13,7 @@ services:
   lab:
     image: memgraph/lab:latest
     container_name: memgraph-lab
+    pull_policy: always
     ports:
       - "3000:3000"
     depends_on:
