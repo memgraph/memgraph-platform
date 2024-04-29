@@ -6,12 +6,6 @@
 <p align="center">
   <a href="https://github.com/memgraph/memgraph-platform/blob/main/LICENSE">
     <img src="https://img.shields.io/github/license/memgraph/memgraph-platform?style=plastic" alt="license" title="license"/>
-  <a href="https://hub.docker.com/r/memgraph/memgraph-platform">
-    <img src="https://img.shields.io/docker/v/memgraph/memgraph-platform" alt="dockerhub" title="dockerhub"/>
-  </a>
-    <a href="https://hub.docker.com/r/memgraph/memgraph-platform">
-    <img src="https://img.shields.io/docker/pulls/memgraph/memgraph-platform" alt="dockerhub-pulls" title="dockerhub-pulls"/>
-  </a>
 </p>
 
 ## :runner: Quick start
