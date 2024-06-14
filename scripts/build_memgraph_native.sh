@@ -18,6 +18,7 @@ fi
 declare -A MGPLAT_CPACK
 MGPLAT_CPACK[ubuntu]="cpack -G DEB --config ../CPackConfig.cmake"
 MGPLAT_CPACK[debian]="cpack -G DEB --config ../CPackConfig.cmake"
+MGPLAT_CPACK[centos]="cpack -G RPM --config ../CPackConfig.cmake"
 MGPLAT_DIST_BINARY="$DIR/dist/binary"
 print_help() {
   echo -e "Builds memgraph on natively supported operating systems."
