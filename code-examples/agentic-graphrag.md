@@ -55,6 +55,15 @@ Windows (PowerShell 5.1 or 7+), same steps, same output:
 .\agentic-graphrag.ps1 clean    # stop containers and remove the work dir
 ```
 
+Or run it straight from the web, without downloading it first:
+
+```powershell
+iwr -UseBasicParsing https://raw.githubusercontent.com/memgraph/memgraph-platform/main/code-examples/agentic-graphrag.ps1 | iex
+```
+
+This does the same as the bare form above. `clean` needs the downloaded file, but
+the script also prints the equivalent `docker` commands when you run it this way.
+
 If Windows blocks the script, allow local scripts for the session first:
 `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`.
 
