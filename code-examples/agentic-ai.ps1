@@ -31,6 +31,7 @@
 #
 # Requirements: Docker Desktop only. No API keys.
 #   Docker Desktop: https://docs.docker.com/desktop/install/windows-install/
+#   Docker Desktop must be running ("Engine running" in its UI).
 #   The script bind-mounts two generated files into containers, so the drive this
 #   script lives on must be shared with Docker Desktop (Settings > Resources >
 #   File sharing; C:\Users is shared by default).
@@ -38,6 +39,10 @@
 # Usage (PowerShell 5.1 or PowerShell 7+):
 #   .\agentic-ai.ps1          # bring up the shared layer + reasoning graph, plan
 #   .\agentic-ai.ps1 clean    # stop and remove everything this script created
+#
+# Or run it straight from the web (this does the same as the bare form above;
+# `clean` needs the downloaded file, or the docker commands the script prints):
+#   iwr -UseBasicParsing https://raw.githubusercontent.com/memgraph/memgraph-platform/main/code-examples/agentic-ai.ps1 | iex
 #
 # If Windows blocks the script, allow local scripts for this session first:
 #   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
@@ -49,104 +54,257 @@ param(
     [string]$Command = 'run'
 )
 
-Set-StrictMode -Version 2.0
-$LASTEXITCODE = 0
-# Docker and mgconsole write progress/warnings to stderr, so exit codes (checked
-# explicitly below), not stderr, decide success. Keep PowerShell from turning a
-# native command's stderr into a terminating error.
-if (Test-Path variable:PSNativeCommandUseErrorActionPreference) {
-    $PSNativeCommandUseErrorActionPreference = $false
-}
+# The whole demo lives inside this one function on purpose, so the script behaves
+# identically whether it is executed as a file or piped into Invoke-Expression
+# (iwr ... | iex). Under `iex` there is no script to exit from, so a top-level
+# `exit` tears down the caller's entire PowerShell session; inside a function we
+# stop with `return` and let the entry point at the bottom translate that into a
+# process exit code, but only when we were really started from a file. Nesting the
+# helpers keeps them (and Set-StrictMode) out of the caller's session too.
+function Invoke-AgenticAiDemo {
+    [CmdletBinding()]
+    param(
+        [ValidateSet('run', 'clean')]
+        [string]$Command = 'run',
+        [Parameter(Mandatory = $true)]
+        [string]$BaseDir
+    )
 
-$OutputEncoding = New-Object System.Text.UTF8Encoding $false
-try { [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding $false } catch { }
+    Set-StrictMode -Version 2.0
 
-# ---- Pinned versions --------------------------------------------------------
-$MageImage      = 'memgraph/memgraph-mage:3.12.0'
-$MemgqlImage    = 'memgraph/memgql:0.7.0'
-$MgconsoleImage = 'memgraph/mgconsole:1.6.0'
-$PostgresImage  = 'postgres:18'
+    # Docker and mgconsole report progress on stderr. In Windows PowerShell that
+    # turns into ErrorRecords as soon as a stream is redirected, so keep the
+    # preference at Continue and judge success by exit code alone (cmdlets that
+    # must stop pass -ErrorAction Stop explicitly).
+    $ErrorActionPreference = 'Continue'
 
-# Demo-scoped names so this never collides with your own containers/networks.
-$Net      = 'zero-demo-net'
-$Memgraph = 'zero-demo-memgraph'
-$Postgres = 'zero-demo-postgres'
-$Memgql   = 'zero-demo-memgql'
+    # Assign $LASTEXITCODE through $global: only. A plain `$LASTEXITCODE = 0` inside
+    # a function creates a function-local copy that native commands never update,
+    # which would silently disable every exit-code check below.
+    $global:LASTEXITCODE = 0
 
-$ScriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { (Get-Location).Path }
-$Work      = Join-Path $ScriptDir '.memgql-work'
+    # ---- Pinned versions ----------------------------------------------------
+    $MageImage      = 'memgraph/memgraph-mage:3.12.0'
+    $MemgqlImage    = 'memgraph/memgql:0.7.0'
+    $MgconsoleImage = 'memgraph/mgconsole:1.6.0'
+    $PostgresImage  = 'postgres:18'
 
-# ---- Helpers ----------------------------------------------------------------
-function Write-Step {
-    param([Parameter(Mandatory = $true)][string]$Message)
-    Write-Host ''
-    Write-Host "==> $Message" -ForegroundColor Cyan
-}
+    # Demo-scoped names so this never collides with your own containers/networks.
+    $Net      = 'zero-demo-net'
+    $Memgraph = 'zero-demo-memgraph'
+    $Postgres = 'zero-demo-postgres'
+    $Memgql   = 'zero-demo-memgql'
 
-# Invoke-Mg plans over the reasoning graph in Memgraph directly (port 7687, MAGE).
-function Invoke-Mg {
-    param([Parameter(Mandatory = $true)][string]$Cypher)
-    $Cypher | docker run -i --rm --network $Net $MgconsoleImage --host $Memgraph --port 7687
-    if ($LASTEXITCODE -ne 0) { throw "mgconsole (Memgraph) exited with code $LASTEXITCODE" }
-}
+    $Work = Join-Path $BaseDir '.memgql-work'
 
-# Invoke-Memgql is the shared, federated endpoint every agent connects to (7688).
-function Invoke-Memgql {
-    param([Parameter(Mandatory = $true)][string]$Cypher)
-    $Cypher | docker run -i --rm --network $Net $MgconsoleImage --host $Memgql --port 7688
-    if ($LASTEXITCODE -ne 0) { throw "mgconsole (MemGQL) exited with code $LASTEXITCODE" }
-}
+    # Tailor the copy-pasteable hints to how this was actually started: someone who
+    # piped us into `iex` has no .ps1 on disk to re-run or to pass `clean` to.
+    $SourceUrl = 'https://raw.githubusercontent.com/memgraph/memgraph-platform/main/code-examples/agentic-ai.ps1'
+    if ($PSCommandPath) {
+        $Self      = '.\' + (Split-Path -Leaf $PSCommandPath)
+        $RunHint   = $Self
+        $CleanHint = "$Self clean"
+    } else {
+        $RunHint   = "iwr -UseBasicParsing $SourceUrl | iex"
+        $CleanHint = "docker rm -f $Memgql $Memgraph $Postgres; docker network rm $Net; Remove-Item -Recurse -Force '$Work'"
+    }
 
-function Test-Bolt {
-    # Silent probe against either endpoint, used for the readiness loops.
-    param([Parameter(Mandatory = $true)][string]$MgHost, [Parameter(Mandatory = $true)][string]$Port)
-    'RETURN 1;' | docker run -i --rm --network $Net $MgconsoleImage --host $MgHost --port $Port *> $null
-    return ($LASTEXITCODE -eq 0)
-}
+    # ---- Helpers ------------------------------------------------------------
+    function Write-Step {
+        param([Parameter(Mandatory = $true)][string]$Message)
+        Write-Host ''
+        Write-Host "==> $Message" -ForegroundColor Cyan
+    }
 
-function ConvertTo-DockerPath {
-    # Docker Desktop accepts forward-slash Windows paths (C:/Users/... ) in -v.
-    param([Parameter(Mandatory = $true)][string]$Path)
-    return ($Path -replace '\\', '/')
-}
+    function Write-Fail {
+        param([Parameter(Mandatory = $true)][string[]]$Message)
+        Write-Host ''
+        $Message | ForEach-Object { Write-Host $_ -ForegroundColor Red }
+    }
 
-function Write-Utf8NoBom {
-    # No BOM: a BOM would break the psql init script and the JSON mapping.
-    param([Parameter(Mandatory = $true)][string]$Path, [Parameter(Mandatory = $true)][string]$Content)
-    $lf = $Content -replace "`r`n", "`n"
-    [System.IO.File]::WriteAllText($Path, $lf, (New-Object System.Text.UTF8Encoding $false))
-}
+    function Invoke-Docker {
+        # Run docker quietly, but on failure print what docker actually said.
+        # Discarding its output with `*> $null` and then guessing at the cause is
+        # how a Docker Hub pull timeout ends up reported as a port conflict.
+        param(
+            [Parameter(Mandatory = $true)][string]$What,
+            [Parameter(Mandatory = $true)][string[]]$DockerArgs
+        )
+        $out = & docker @DockerArgs 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            Write-Fail (@("$What failed (docker exit $LASTEXITCODE):") +
+                        ($out | ForEach-Object { "  $_" }))
+            return $false
+        }
+        return $true
+    }
 
-function Remove-Demo {
-    Write-Step 'Stopping and removing containers + network + work dir'
+    function Invoke-MgConsole {
+        # Feed Cypher to mgconsole through a temp file and cmd-level redirection.
+        #
+        # Piping a PowerShell string straight into `docker run -i` reads better, but
+        # PowerShell encodes native-command stdin with the console encoding, and on a
+        # console running the UTF-8 code page (chcp 65001, or the "Use Unicode UTF-8"
+        # option) that encoding emits a BOM. The BOM arrives in front of the first
+        # statement and mgconsole rejects every query with "wrong token at position
+        # 0" -- which silently turns the readiness loops into infinite waits.
+        # Neither $OutputEncoding nor [Console]::OutputEncoding suppresses it, so
+        # write the bytes ourselves and let cmd wire up stdin.
+        param(
+            [Parameter(Mandatory = $true)][string]$Cypher,
+            [Parameter(Mandatory = $true)][string]$MgHost,
+            [Parameter(Mandatory = $true)][string]$Port,
+            [switch]$Quiet
+        )
+        $tmp = [System.IO.Path]::GetTempFileName()
+        try {
+            [System.IO.File]::WriteAllText($tmp,
+                (($Cypher -replace "`r`n", "`n").TrimEnd() + "`n"),
+                (New-Object System.Text.UTF8Encoding $false))
+            $line = "docker run -i --rm --network $Net $MgconsoleImage --host $MgHost --port $Port < `"$tmp`""
+            if ($Quiet) { cmd /c $line *> $null } else { cmd /c $line }
+        } finally {
+            Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    # Invoke-Mg plans over the reasoning graph in Memgraph directly (7687, MAGE).
+    function Invoke-Mg {
+        param([Parameter(Mandatory = $true)][string]$Cypher)
+        Invoke-MgConsole -Cypher $Cypher -MgHost $Memgraph -Port '7687'
+        if ($LASTEXITCODE -ne 0) { throw "mgconsole (Memgraph) exited with code $LASTEXITCODE" }
+    }
+
+    # Invoke-Memgql is the shared, federated endpoint every agent connects to (7688).
+    function Invoke-Memgql {
+        param([Parameter(Mandatory = $true)][string]$Cypher)
+        Invoke-MgConsole -Cypher $Cypher -MgHost $Memgql -Port '7688'
+        if ($LASTEXITCODE -ne 0) { throw "mgconsole (MemGQL) exited with code $LASTEXITCODE" }
+    }
+
+    function Test-Bolt {
+        # Silent probe against either endpoint, used for the readiness loops.
+        param([Parameter(Mandatory = $true)][string]$MgHost, [Parameter(Mandatory = $true)][string]$Port)
+        Invoke-MgConsole -Cypher 'RETURN 1;' -MgHost $MgHost -Port $Port -Quiet
+        return ($LASTEXITCODE -eq 0)
+    }
+
+    function Wait-Bolt {
+        # Bounded readiness wait. An unbounded `while (-not ready)` loop turns a
+        # container that died at startup into a script that hangs forever with no
+        # explanation, so give up after a timeout and show the container's logs.
+        param(
+            [Parameter(Mandatory = $true)][string]$What,
+            [Parameter(Mandatory = $true)][string]$MgHost,
+            [Parameter(Mandatory = $true)][string]$Port,
+            [Parameter(Mandatory = $true)][string]$Container,
+            [int]$TimeoutSeconds = 120
+        )
+        Write-Step "Waiting for $What"
+        for ($waited = 0; $waited -lt $TimeoutSeconds; $waited++) {
+            if (Test-Bolt -MgHost $MgHost -Port $Port) { return $true }
+            Start-Sleep -Seconds 1
+        }
+        Write-Fail @("$What did not accept Bolt connections within $TimeoutSeconds seconds.",
+                     "Last lines of '$Container' logs:")
+        docker logs --tail 30 $Container 2>&1 | ForEach-Object { Write-Host "  $_" }
+        return $false
+    }
+
+    function ConvertTo-DockerPath {
+        # Docker Desktop accepts forward-slash Windows paths (C:/Users/... ) in -v.
+        param([Parameter(Mandatory = $true)][string]$Path)
+        return ($Path -replace '\\', '/')
+    }
+
+    function Write-Utf8NoBom {
+        # No BOM: a BOM would break the psql init script and the JSON mapping.
+        param([Parameter(Mandatory = $true)][string]$Path, [Parameter(Mandatory = $true)][string]$Content)
+        $lf = $Content -replace "`r`n", "`n"
+        [System.IO.File]::WriteAllText($Path, $lf, (New-Object System.Text.UTF8Encoding $false))
+    }
+
+    function Remove-Demo {
+        Write-Step 'Stopping and removing containers + network + work dir'
+        # Teardown must work even on a machine that no longer has Docker: the work
+        # dir is still worth removing, and "nothing to remove" is not a failure.
+        if (Get-Command docker -ErrorAction SilentlyContinue) {
+            docker rm -f $Memgql $Memgraph $Postgres *> $null
+            docker network rm $Net *> $null
+            $global:LASTEXITCODE = 0
+        }
+        if (Test-Path -LiteralPath $Work) {
+            Remove-Item -LiteralPath $Work -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        Write-Host 'Cleaned up.'
+    }
+
+    if ($Command -eq 'clean') {
+        Remove-Demo
+        return
+    }
+
+    # ---- 0. Prerequisites ----------------------------------------------------
+    if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
+        Write-Fail @('Docker is required: https://docs.docker.com/desktop/install/windows-install/',
+                     'If Docker Desktop is already installed, open a NEW terminal so it picks up the PATH entry it added.')
+        $script:DemoExitCode = 1
+        return
+    }
+
+    # Docker Desktop being installed but not started is the most common way this
+    # demo fails. Catch it here, where the fix is obvious, instead of several steps
+    # later with a misleading "Failed to start Memgraph".
+    docker info *> $null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Fail @(
+            'Docker is installed but its engine is not responding.',
+            'Start Docker Desktop, wait until it reports "Engine running", then re-run:',
+            "  $RunHint")
+        $script:DemoExitCode = 1
+        return
+    }
+
+    # ---- Pull the images -----------------------------------------------------
+    # `docker run` pulls implicitly, but its progress goes to stderr, so a first
+    # run used to sit silent for minutes on a multi-GB download and a failed pull
+    # surfaced later as a misleading "failed to start". Pull up front, visibly, and
+    # retry: Docker Hub timeouts ("timeout awaiting response headers") are common
+    # and a single retry usually clears them.
+    foreach ($img in @($MageImage, $PostgresImage, $MemgqlImage, $MgconsoleImage)) {
+        docker image inspect $img *> $null
+        if ($LASTEXITCODE -eq 0) { continue }
+        Write-Step "Pulling $img (first run only, this can take a few minutes)"
+        $pulled = $false
+        for ($attempt = 1; $attempt -le 3; $attempt++) {
+            docker pull $img 2>&1 | ForEach-Object { Write-Host "  $_" }
+            if ($LASTEXITCODE -eq 0) { $pulled = $true; break }
+            if ($attempt -lt 3) {
+                Write-Host "Pull attempt $attempt failed; retrying in 5s..." -ForegroundColor Yellow
+                Start-Sleep -Seconds 5
+            }
+        }
+        if (-not $pulled) {
+            Write-Fail @(
+                "Could not pull $img after 3 attempts.",
+                'Check your connection to Docker Hub (a VPN or proxy is a common cause), then re-run:',
+                "  $RunHint")
+            $script:DemoExitCode = 1
+            return
+        }
+    }
+
+    # ---- Reset any previous run ----------------------------------------------
     docker rm -f $Memgql $Memgraph $Postgres *> $null
-    docker network rm $Net *> $null
-    $global:LASTEXITCODE = 0   # nothing to remove is not a failure
-    if (Test-Path -LiteralPath $Work) { Remove-Item -LiteralPath $Work -Recurse -Force -ErrorAction SilentlyContinue }
-    Write-Host 'Cleaned up.'
-}
+    docker network create $Net *> $null
+    $global:LASTEXITCODE = 0
 
-if ($Command -eq 'clean') {
-    Remove-Demo
-    exit 0
-}
+    # ---- Generate the Postgres seed + the relational->graph mapping ----------
+    New-Item -ItemType Directory -Force -Path $Work -ErrorAction Stop | Out-Null
 
-if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
-    Write-Error 'Docker is required: https://docs.docker.com/desktop/install/windows-install/'
-    exit 1
-}
-
-# ---- Reset any previous run -------------------------------------------------
-docker rm -f $Memgql $Memgraph $Postgres *> $null
-docker network create $Net *> $null
-$LASTEXITCODE = 0
-
-# ---- Generate the Postgres seed + the relational->graph mapping -------------
-New-Item -ItemType Directory -Force -Path $Work -ErrorAction Stop | Out-Null
-
-# Postgres source: customer records the agents pull as shared context.
-$InitSql = Join-Path $Work 'init.sql'
-Write-Utf8NoBom $InitSql @'
+    # Postgres source: customer records the agents pull as shared context.
+    $InitSql = Join-Path $Work 'init.sql'
+    Write-Utf8NoBom $InitSql @'
 CREATE TABLE customers (id SERIAL PRIMARY KEY, name TEXT, tier TEXT);
 CREATE TABLE companies (id SERIAL PRIMARY KEY, name TEXT);
 CREATE TABLE works_at  (id SERIAL PRIMARY KEY, customer_id INT REFERENCES customers(id), company_id INT REFERENCES companies(id));
@@ -156,9 +314,9 @@ INSERT INTO companies (name)       VALUES ('Acme Corp'), ('Globex');
 INSERT INTO works_at (customer_id, company_id) VALUES (1, 1), (2, 2), (3, 1);
 '@
 
-# MemGQL mapping: how the Postgres tables become graph nodes and edges.
-$MappingJson = Join-Path $Work 'mapping.json'
-Write-Utf8NoBom $MappingJson @'
+    # MemGQL mapping: how the Postgres tables become graph nodes and edges.
+    $MappingJson = Join-Path $Work 'mapping.json'
+    Write-Utf8NoBom $MappingJson @'
 {
   "nodes": [
     { "label": "Customer", "table": "customers", "id_column": "id", "properties": { "name": "name", "tier": "tier" } },
@@ -170,46 +328,65 @@ Write-Utf8NoBom $MappingJson @'
 }
 '@
 
-$WorkDocker = ConvertTo-DockerPath $Work
+    $WorkDocker = ConvertTo-DockerPath $Work
 
-# ---- 1. Start the shared data layer (Memgraph + Postgres + MemGQL) ----------
-# Backends are reached only by MemGQL over the internal network, so their ports
-# are not published to the host, agents talk to the single MemGQL endpoint (7688).
-Write-Step "Starting Memgraph backend ($MageImage) - hosts the reasoning graph"
-docker run -d --name $Memgraph --network $Net `
-    $MageImage --schema-info-enabled=True --log-level=TRACE --also-log-to-stderr *> $null
-if ($LASTEXITCODE -ne 0) { throw 'Failed to start Memgraph.' }
+    # ---- 1. Start the shared data layer (Memgraph + Postgres + MemGQL) ------
+    # Backends are reached only by MemGQL over the internal network, so their ports
+    # are not published to the host, agents talk to the single MemGQL endpoint (7688).
+    Write-Step "Starting Memgraph backend ($MageImage) - hosts the reasoning graph"
+    if (-not (Invoke-Docker -What 'Starting Memgraph' -DockerArgs @(
+                'run', '-d', '--name', $Memgraph, '--network', $Net,
+                $MageImage, '--schema-info-enabled=True', '--log-level=TRACE', '--also-log-to-stderr'))) {
+        Write-Host "If a previous run is still up, tear it down with: $CleanHint" -ForegroundColor Yellow
+        $script:DemoExitCode = 1
+        return
+    }
 
-Write-Step "Starting PostgreSQL backend ($PostgresImage) - hosts customer records"
-docker run -d --name $Postgres --network $Net `
-    -e POSTGRES_PASSWORD=postgres `
-    -v "${WorkDocker}/init.sql:/docker-entrypoint-initdb.d/init.sql" `
-    $PostgresImage *> $null
-if ($LASTEXITCODE -ne 0) { throw 'Failed to start PostgreSQL.' }
+    Write-Step "Starting PostgreSQL backend ($PostgresImage) - hosts customer records"
+    if (-not (Invoke-Docker -What 'Starting PostgreSQL' -DockerArgs @(
+                'run', '-d', '--name', $Postgres, '--network', $Net,
+                '-e', 'POSTGRES_PASSWORD=postgres',
+                '-v', "${WorkDocker}/init.sql:/docker-entrypoint-initdb.d/init.sql",
+                $PostgresImage))) {
+        Write-Host 'A bind-mount error here usually means this drive is not shared with Docker Desktop' -ForegroundColor Yellow
+        Write-Host '(Settings > Resources > File sharing).' -ForegroundColor Yellow
+        $script:DemoExitCode = 1
+        return
+    }
 
-Write-Step 'Waiting for Memgraph'
-while (-not (Test-Bolt -MgHost $Memgraph -Port '7687')) { Start-Sleep -Seconds 1 }
-Write-Step 'Waiting for PostgreSQL'
-do {
-    docker exec $Postgres pg_isready -U postgres *> $null
-    $pgReady = ($LASTEXITCODE -eq 0)
-    if (-not $pgReady) { Start-Sleep -Seconds 1 }
-} while (-not $pgReady)
+    if (-not (Wait-Bolt -What 'Memgraph' -MgHost $Memgraph -Port '7687' -Container $Memgraph)) {
+        $script:DemoExitCode = 1
+        return
+    }
 
-# If the bind mount did not take effect (a drive that is not shared with Docker
-# Desktop), seed the same SQL through psql so the demo still works.
-docker exec $Postgres psql -U postgres -d postgres -c 'SELECT 1 FROM customers LIMIT 1;' *> $null
-if ($LASTEXITCODE -ne 0) {
-    Write-Step 'Seeding PostgreSQL through psql (the init.sql bind mount was not picked up)'
-    Get-Content -LiteralPath $InitSql -Raw | docker exec -i $Postgres psql -U postgres -d postgres *> $null
-    if ($LASTEXITCODE -ne 0) { throw 'Could not seed PostgreSQL.' }
-}
+    Write-Step 'Waiting for PostgreSQL'
+    $pgReady = $false
+    for ($waited = 0; $waited -lt 120; $waited++) {
+        docker exec $Postgres pg_isready -U postgres *> $null
+        if ($LASTEXITCODE -eq 0) { $pgReady = $true; break }
+        Start-Sleep -Seconds 1
+    }
+    if (-not $pgReady) {
+        Write-Fail @('PostgreSQL did not become ready within 120 seconds.', "Last lines of '$Postgres' logs:")
+        docker logs --tail 30 $Postgres 2>&1 | ForEach-Object { Write-Host "  $_" }
+        $script:DemoExitCode = 1
+        return
+    }
 
-# ---- 2. Seed the reasoning graph (states + scored actions) ------------------
-# A customer-support agent's plan space: states are nodes, actions are edges, and
-# each action carries a score (expected probability of resolving the ticket).
-Write-Step 'Seeding the customer-support reasoning graph in Memgraph'
-Invoke-Mg @'
+    # If the bind mount did not take effect (a drive that is not shared with Docker
+    # Desktop), seed the same SQL through psql so the demo still works.
+    docker exec $Postgres psql -U postgres -d postgres -c 'SELECT 1 FROM customers LIMIT 1;' *> $null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Step 'Seeding PostgreSQL through psql (the init.sql bind mount was not picked up)'
+        Get-Content -LiteralPath $InitSql -Raw | docker exec -i $Postgres psql -U postgres -d postgres *> $null
+        if ($LASTEXITCODE -ne 0) { throw 'Could not seed PostgreSQL.' }
+    }
+
+    # ---- 2. Seed the reasoning graph (states + scored actions) --------------
+    # A customer-support agent's plan space: states are nodes, actions are edges, and
+    # each action carries a score (expected probability of resolving the ticket).
+    Write-Step 'Seeding the customer-support reasoning graph in Memgraph'
+    Invoke-Mg @'
 MERGE (s0:State {name:"Ticket received"});
 MERGE (s1:State {name:"Assess severity"});
 MERGE (a:State  {name:"Auto-resolve"});
@@ -225,20 +402,27 @@ MATCH (e:State{name:"Escalate to human"}),(d:State{name:"Resolved"})        MERG
 MATCH (r:State{name:"Request more info"}),(s1:State{name:"Assess severity"})MERGE (r)-[:ACTION {name:"reassess",     score:0.60}]->(s1);
 '@
 
-# ---- 3. Memgraph Zero: put MemGQL in front of both sources ------------------
-Write-Step "Starting MemGQL ($MemgqlImage) - the shared federated endpoint (Bolt on 7688)"
-docker run -d --name $Memgql --network $Net --stop-timeout 2 -p 7688:7688 `
-    --env CONNECTOR_TYPE=multi `
-    --env BOLT_LISTEN_ADDR=0.0.0.0:7688 `
-    -v "${WorkDocker}/mapping.json:/data/mapping.json" `
-    $MemgqlImage *> $null
-if ($LASTEXITCODE -ne 0) { throw 'Failed to start MemGQL.' }
+    # ---- 3. Memgraph Zero: put MemGQL in front of both sources --------------
+    Write-Step "Starting MemGQL ($MemgqlImage) - the shared federated endpoint (Bolt on 7688)"
+    if (-not (Invoke-Docker -What 'Starting MemGQL' -DockerArgs @(
+                'run', '-d', '--name', $Memgql, '--network', $Net, '--stop-timeout', '2',
+                '-p', '7688:7688',
+                '--env', 'CONNECTOR_TYPE=multi',
+                '--env', 'BOLT_LISTEN_ADDR=0.0.0.0:7688',
+                '-v', "${WorkDocker}/mapping.json:/data/mapping.json",
+                $MemgqlImage))) {
+        Write-Host "If port 7688 is already taken, free it or tear down with: $CleanHint" -ForegroundColor Yellow
+        $script:DemoExitCode = 1
+        return
+    }
 
-Write-Step 'Waiting for MemGQL'
-while (-not (Test-Bolt -MgHost $Memgql -Port '7688')) { Start-Sleep -Seconds 1 }
+    if (-not (Wait-Bolt -What 'MemGQL' -MgHost $Memgql -Port '7688' -Container $Memgql)) {
+        $script:DemoExitCode = 1
+        return
+    }
 
-Write-Step "Registering connectors: 'mg' (reasoning graph) and 'pg' (customer records)"
-Invoke-Memgql @"
+    Write-Step "Registering connectors: 'mg' (reasoning graph) and 'pg' (customer records)"
+    Invoke-Memgql @"
 ADD CONNECTOR mg TYPE memgraph URI '${Memgraph}:7687' GRAPH memgraph;
 CONNECT mg AS mg_conn;
 ADD MAPPING social FROM '/data/mapping.json';
@@ -246,11 +430,11 @@ ADD CONNECTOR pg TYPE postgres URI 'host=${Postgres} user=postgres password=post
 CONNECT pg AS pg_conn;
 "@
 
-# ---- 4. Shared context: agents pull records through the one endpoint --------
-# Multi-agent coordination: every agent reads the same federated layer. Here an
-# agent fetches customer context from Postgres, through MemGQL, with no ETL.
-Write-Step 'Agent reads shared context: enterprise customers (Postgres, via MemGQL)'
-Invoke-Memgql @'
+    # ---- 4. Shared context: agents pull records through the one endpoint ----
+    # Multi-agent coordination: every agent reads the same federated layer. Here an
+    # agent fetches customer context from Postgres, through MemGQL, with no ETL.
+    Write-Step 'Agent reads shared context: enterprise customers (Postgres, via MemGQL)'
+    Invoke-Memgql @'
 USE CONNECTION pg_conn
   MATCH (c:Customer)-[:WORKS_AT]->(co:Company)
   WHERE c.tier = 'enterprise'
@@ -258,48 +442,48 @@ USE CONNECTION pg_conn
   ORDER BY customer;
 '@
 
-# ---- 5. Plan over the reasoning graph (no prompting) ------------------------
-# These run natively in Memgraph (MAGE + weighted shortest path).
-Write-Step 'Plan 1/4 - Weighted traversal: rank full resolution plans by expected value (no LLM)'
-Invoke-Mg @'
+    # ---- 5. Plan over the reasoning graph (no prompting) --------------------
+    # These run natively in Memgraph (MAGE + weighted shortest path).
+    Write-Step 'Plan 1/4 - Weighted traversal: rank full resolution plans by expected value (no LLM)'
+    Invoke-Mg @'
 MATCH path=(:State {name:"Ticket received"})-[rels:ACTION *1..6]->(:State {name:"Resolved"})
 RETURN [n IN nodes(path) | n.name] AS plan,
        round(reduce(p=1.0, r IN rels | p * r.score) * 1000) / 1000 AS expected_value
 ORDER BY expected_value DESC LIMIT 4;
 '@
 
-Write-Step 'Audit: chosen path vs the next-best alternative (inspectable trace)'
-Invoke-Mg @'
+    Write-Step 'Audit: chosen path vs the next-best alternative (inspectable trace)'
+    Invoke-Mg @'
 MATCH path=(:State {name:"Ticket received"})-[rels:ACTION *1..6]->(:State {name:"Resolved"})
 WITH [n IN nodes(path) | n.name] AS plan, reduce(p=1.0, r IN rels | p * r.score) AS ev
 ORDER BY ev DESC LIMIT 2
 RETURN plan, round(ev * 1000) / 1000 AS expected_value;
 '@
 
-Write-Step "Plan 2/4 - Shortest path: most efficient route to 'Resolved' (weighted, cost = 1 - score)"
-Invoke-Mg @'
+    Write-Step "Plan 2/4 - Shortest path: most efficient route to 'Resolved' (weighted, cost = 1 - score)"
+    Invoke-Mg @'
 MATCH path=(:State {name:"Ticket received"})-[:ACTION *WSHORTEST (e, n | 1.0 - e.score) total_cost]->(:State {name:"Resolved"})
 RETURN [x IN nodes(path) | x.name] AS route, round(total_cost * 1000) / 1000 AS cost;
 '@
 
-Write-Step 'Plan 3/4 - Centrality: the critical intermediate state (MAGE betweenness)'
-Invoke-Mg @'
+    Write-Step 'Plan 3/4 - Centrality: the critical intermediate state (MAGE betweenness)'
+    Invoke-Mg @'
 CALL betweenness_centrality.get() YIELD node, betweenness_centrality
 RETURN node.name AS state, round(betweenness_centrality * 1000) / 1000 AS centrality
 ORDER BY centrality DESC LIMIT 5;
 '@
 
-Write-Step 'Plan 4/4 - Community detection: sub-tasks that can run in parallel (MAGE)'
-Invoke-Mg @'
+    Write-Step 'Plan 4/4 - Community detection: sub-tasks that can run in parallel (MAGE)'
+    Invoke-Mg @'
 CALL community_detection.get() YIELD node, community_id
 RETURN community_id, collect(node.name) AS states
 ORDER BY community_id;
 '@
 
-# ---- Wrap up ----------------------------------------------------------------
-Write-Host ''
-Write-Host "$([char]0x2713) Agents planned over the reasoning graph on a shared data layer." -ForegroundColor Green
-Write-Host @"
+    # ---- Wrap up -------------------------------------------------------------
+    Write-Host ''
+    Write-Host "$([char]0x2713) Agents planned over the reasoning graph on a shared data layer." -ForegroundColor Green
+    Write-Host @"
 
 The plan was chosen by traversal, not prompting: "Ticket received -> Assess
 severity -> Auto-resolve -> Resolved" scored highest (expected value 0.8), and
@@ -322,5 +506,40 @@ Notes (MemGQL is early):
   - MemGQL Community allows up to two simultaneous data sources.
 
 Tear everything down:
-  .\agentic-ai.ps1 clean
+  $CleanHint
 "@
+}
+
+# ---- Entry point -------------------------------------------------------------
+# Piped into `iex` there is no $PSScriptRoot, so fall back to the current directory.
+$BaseDir = if ($PSScriptRoot) { $PSScriptRoot } else { (Get-Location).Path }
+$script:DemoExitCode = 0
+
+# Docker and mgconsole write progress/warnings to stderr, so exit codes (checked
+# explicitly above), not stderr, decide success. Keep PowerShell from turning a
+# native command's stderr into a terminating error. Every global we touch here is
+# restored below, so an `iwr | iex` run leaves the session as it found it.
+$prevNativeErrorPref = $null
+$hasNativeErrorPref = Test-Path variable:PSNativeCommandUseErrorActionPreference
+if ($hasNativeErrorPref) {
+    $prevNativeErrorPref = $PSNativeCommandUseErrorActionPreference
+    $PSNativeCommandUseErrorActionPreference = $false
+}
+$prevOutputEncoding = $OutputEncoding
+$prevConsoleEncoding = $null
+try { $prevConsoleEncoding = [Console]::OutputEncoding } catch { }
+
+$OutputEncoding = New-Object System.Text.UTF8Encoding $false
+try { [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding $false } catch { }
+
+try {
+    Invoke-AgenticAiDemo -Command $Command -BaseDir $BaseDir
+} finally {
+    $OutputEncoding = $prevOutputEncoding
+    if ($prevConsoleEncoding) { try { [Console]::OutputEncoding = $prevConsoleEncoding } catch { } }
+    if ($hasNativeErrorPref) { $PSNativeCommandUseErrorActionPreference = $prevNativeErrorPref }
+}
+
+# Only a real file run may set a process exit code: doing this under `iex` would
+# close the caller's PowerShell session.
+if ($PSCommandPath) { exit $script:DemoExitCode }
