@@ -141,25 +141,58 @@ function Invoke-AgenticGraphRagDemo {
         return $true
     }
 
+    function Invoke-MgConsole {
+        # Feed Cypher to mgconsole through a temp file and cmd-level redirection.
+        #
+        # Piping a PowerShell string straight into `docker run -i` reads better, but
+        # PowerShell encodes native-command stdin with the console encoding, and on a
+        # console running the UTF-8 code page (chcp 65001, or the "Use Unicode UTF-8"
+        # option) that encoding emits a BOM. The BOM arrives in front of the first
+        # statement and mgconsole rejects every query with "wrong token at position
+        # 0" -- which silently turns the readiness loop below into an infinite wait.
+        # Neither $OutputEncoding nor [Console]::OutputEncoding suppresses it, so
+        # write the bytes ourselves and let cmd wire up stdin.
+        param(
+            [Parameter(Mandatory = $true)][string]$Cypher,
+            [ValidateSet('Show', 'Quiet', 'Capture')][string]$Mode = 'Show'
+        )
+        $tmp = [System.IO.Path]::GetTempFileName()
+        try {
+            [System.IO.File]::WriteAllText($tmp,
+                (($Cypher -replace "`r`n", "`n").TrimEnd() + "`n"),
+                (New-Object System.Text.UTF8Encoding $false))
+            $line = "docker run -i --rm --network $Net $MgconsoleImage --host $Db --port 7687 < `"$tmp`""
+            if ($Mode -eq 'Quiet') {
+                cmd /c $line *> $null
+                return ($LASTEXITCODE -eq 0)
+            }
+            if ($Mode -eq 'Capture') {
+                $out = cmd /c $line 2>$null
+                return ($out -join "`n")
+            }
+            cmd /c $line
+        } finally {
+            Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
+        }
+    }
+
     function Invoke-Mg {
         # Run Cypher against Memgraph and show the result.
         param([Parameter(Mandatory = $true)][string]$Cypher)
-        $Cypher | docker run -i --rm --network $Net $MgconsoleImage --host $Db --port 7687
+        Invoke-MgConsole -Cypher $Cypher -Mode Show
         if ($LASTEXITCODE -ne 0) { throw "mgconsole exited with code $LASTEXITCODE" }
     }
 
     function Invoke-MgQuiet {
         # Run Cypher, discard output, report success (used for polling + bulk import).
         param([Parameter(Mandatory = $true)][string]$Cypher)
-        $Cypher | docker run -i --rm --network $Net $MgconsoleImage --host $Db --port 7687 *> $null
-        return ($LASTEXITCODE -eq 0)
+        return (Invoke-MgConsole -Cypher $Cypher -Mode Quiet)
     }
 
     function Get-MgText {
         # Run Cypher and capture the raw text output.
         param([Parameter(Mandatory = $true)][string]$Cypher)
-        $out = $Cypher | docker run -i --rm --network $Net $MgconsoleImage --host $Db --port 7687 2>$null
-        return ($out -join "`n")
+        return (Invoke-MgConsole -Cypher $Cypher -Mode Capture)
     }
 
     function Remove-Tree {
@@ -271,8 +304,22 @@ function Invoke-AgenticGraphRagDemo {
         return
     }
 
+    # Bounded wait: an unbounded `while (-not ready)` loop turns any container that
+    # dies at startup (or any query that can never succeed) into a script that hangs
+    # forever with no explanation, so give up and show the container's logs.
     Write-Step 'Waiting for Memgraph to accept Bolt connections'
-    while (-not (Invoke-MgQuiet 'RETURN 1;')) { Start-Sleep -Seconds 1 }
+    $ready = $false
+    for ($waited = 0; $waited -lt 120; $waited++) {
+        if (Invoke-MgQuiet 'RETURN 1;') { $ready = $true; break }
+        Start-Sleep -Seconds 1
+    }
+    if (-not $ready) {
+        Write-Fail @('Memgraph did not accept Bolt connections within 120 seconds.',
+                     "Last lines of '$Db' logs:")
+        docker logs --tail 30 $Db 2>&1 | ForEach-Object { Write-Host "  $_" }
+        $script:DemoExitCode = 1
+        return
+    }
 
     # ---- 2. Load the knowledge graph ----------------------------------------
     # mgconsole accepts a bounded amount of input per invocation, so the .cypherl is
