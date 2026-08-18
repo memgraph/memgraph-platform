@@ -167,25 +167,30 @@ docker run -d --name aimemory-lab --network aimemory-net -p 3000:3000 \
 ## Wire It Into a Real Harness
 
 The seeding above did by hand what a real coding-assistant plugin does
-automatically. The
+automatically. For Claude Code, one script installs and wires the
 [Context Graph](https://github.com/memgraph/ai-toolkit/tree/main/context-graph)
-project ships that plugin for Claude Code and Codex — install it and point it
-at this same Memgraph instance (its defaults, `bolt://localhost:7687` with no
-auth and database `memgraph`, already match the container above):
+plugin end to end, defaulting to this same Memgraph instance
+(`bolt://localhost:7687`, no auth, database `memgraph`):
 
 ```bash
-uv tool install agent-context-graph --with "skills-graph[agent-context-graph]"
-agent-context-graph bootstrap --runtime claude-code \
-  --connector skills-graph --connector actions-graph --connector sessions-graph
-agent-context-graph config set identity.user_id "your-name"
+curl -fsSL https://raw.githubusercontent.com/memgraph/ai-toolkit/main/context-graph/scripts/install.sh | bash
 ```
+
+It registers the Claude Code plugin marketplace and installs the plugin —
+the step a bare `agent-context-graph bootstrap` can't do, since that's what
+actually wires hooks into Claude Code — installs the CLI with all three
+connectors, sets your identity, and verifies with `doctor`. It even starts
+Memgraph itself if nothing's reachable, so on a clean machine it doubles as
+an alternative to steps 1–2 above. Override identity with
+`AGENT_CONTEXT_GRAPH_USER_ID` (defaults to `git config user.name`); see the
+[Context Graph guide](https://github.com/memgraph/ai-toolkit/blob/main/context-graph/README.md#getting-started-claude-code)
+for the rest of the configurable env vars and defaults, Codex setup (no
+non-interactive plugin-install step there yet), reconciliation, and
+cross-component queries.
 
 Every real session then writes `Memory`/`Action`/`Skill` nodes automatically —
 the same nodes `ai-memory.py` just wrote by hand — and the next session reads
-that memory back before it starts. See the
-[Context Graph guide](https://github.com/memgraph/ai-toolkit/blob/main/context-graph/README.md)
-for the full walkthrough (Codex setup, reconciliation, cross-component
-queries).
+that memory back before it starts.
 
 ## Clean Up
 

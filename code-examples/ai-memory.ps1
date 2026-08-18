@@ -185,18 +185,23 @@ Explore the memory graph visually with Memgraph Lab:
   start http://localhost:3000     # then run:  MATCH p=()-[]-() RETURN p;
 
 Wire this into a REAL harness so it collects sessions automatically (no seeding
-by hand): install the Context Graph plugin for Claude Code or Codex and point it
-at this same Memgraph instance -- its defaults (bolt://localhost:7687, no auth,
-database memgraph) already match this container.
+by hand). One script installs and wires the Context Graph plugin for Claude
+Code end to end, defaulting to this same Memgraph instance
+(bolt://localhost:$BoltPort, no auth, database memgraph) -- run it from WSL or
+Git Bash (no native PowerShell port yet):
 
-  uv tool install agent-context-graph --with "skills-graph[agent-context-graph]"
-  agent-context-graph bootstrap --runtime claude-code ``
-    --connector skills-graph --connector actions-graph --connector sessions-graph
-  agent-context-graph config set identity.user_id "your-name"
+  curl -fsSL https://raw.githubusercontent.com/memgraph/ai-toolkit/main/context-graph/scripts/install.sh | bash
+
+It registers the plugin marketplace, installs the plugin (the step a bare
+'agent-context-graph bootstrap' can't do -- that's what wires hooks into
+Claude Code), installs the CLI with all three connectors, sets your identity
+(defaults to your git user.name; override with AGENT_CONTEXT_GRAPH_USER_ID),
+and verifies with doctor. Full env var list, defaults, and the Codex path (no
+non-interactive plugin-install step there yet):
+  https://github.com/memgraph/ai-toolkit/tree/main/context-graph#getting-started-claude-code
 
 Every real session then writes Memory/Action/Skill nodes automatically, the
-same nodes ai-memory.py just wrote by hand. Full walkthrough:
-  https://github.com/memgraph/ai-toolkit/tree/main/context-graph
+same nodes ai-memory.py just wrote by hand.
 
 Tear everything down when you are done:
   .\ai-memory.ps1 clean
