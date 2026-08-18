@@ -167,25 +167,26 @@ docker run -d --name aimemory-lab --network aimemory-net -p 3000:3000 \
 ## Wire It Into a Real Harness
 
 The seeding above did by hand what a real coding-assistant plugin does
-automatically. For Claude Code, one script installs and wires the
+automatically. One script installs and wires the
 [Context Graph](https://github.com/memgraph/ai-toolkit/tree/main/context-graph)
-plugin end to end, defaulting to this same Memgraph instance
-(`bolt://localhost:7687`, no auth, database `memgraph`):
+plugin end to end for Claude Code or Codex, defaulting to this same Memgraph
+instance (`bolt://localhost:7687`, no auth, database `memgraph`):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/memgraph/ai-toolkit/main/context-graph/scripts/install.sh | bash
+# Codex instead of Claude Code:
+CONTEXT_GRAPH_RUNTIME=codex bash -c "$(curl -fsSL https://raw.githubusercontent.com/memgraph/ai-toolkit/main/context-graph/scripts/install.sh)"
 ```
 
-It registers the Claude Code plugin marketplace and installs the plugin —
-the step a bare `agent-context-graph bootstrap` can't do, since that's what
-actually wires hooks into Claude Code — installs the CLI with all three
+It registers the runtime's plugin marketplace and installs the plugin — the
+step a bare `agent-context-graph bootstrap` can't do, since that's what
+actually wires hooks into the runtime — installs the CLI with all three
 connectors, sets your identity, and verifies with `doctor`. It even starts
 Memgraph itself if nothing's reachable, so on a clean machine it doubles as
 an alternative to steps 1–2 above. Override identity with
 `AGENT_CONTEXT_GRAPH_USER_ID` (defaults to `git config user.name`); see the
-[Context Graph guide](https://github.com/memgraph/ai-toolkit/blob/main/context-graph/README.md#getting-started-claude-code)
-for the rest of the configurable env vars and defaults, Codex setup (no
-non-interactive plugin-install step there yet), reconciliation, and
+[Context Graph guide](https://github.com/memgraph/ai-toolkit/blob/main/context-graph/README.md#getting-started-claude-code-or-codex)
+for the rest of the configurable env vars and defaults, reconciliation, and
 cross-component queries.
 
 Every real session then writes `Memory`/`Action`/`Skill` nodes automatically —

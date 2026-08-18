@@ -140,18 +140,19 @@ Explore the memory graph visually with Memgraph Lab:
 
 Wire this into a REAL harness so it collects sessions automatically (no seeding
 by hand). One script installs and wires the Context Graph plugin for Claude
-Code end to end, defaulting to this same Memgraph instance
+Code or Codex end to end, defaulting to this same Memgraph instance
 (bolt://localhost:${BOLT_PORT}, no auth, database memgraph):
 
   curl -fsSL https://raw.githubusercontent.com/memgraph/ai-toolkit/main/context-graph/scripts/install.sh | bash
+  # Codex instead of Claude Code:
+  CONTEXT_GRAPH_RUNTIME=codex bash -c "\$(curl -fsSL https://raw.githubusercontent.com/memgraph/ai-toolkit/main/context-graph/scripts/install.sh)"
 
-It registers the plugin marketplace, installs the plugin (the step a bare
-'agent-context-graph bootstrap' can't do -- that's what wires hooks into
-Claude Code), installs the CLI with all three connectors, sets your identity
+It registers the runtime's plugin marketplace, installs the plugin (the step a
+bare 'agent-context-graph bootstrap' can't do -- that's what wires hooks into
+the runtime), installs the CLI with all three connectors, sets your identity
 (defaults to your git user.name; override with AGENT_CONTEXT_GRAPH_USER_ID),
-and verifies with doctor. Full env var list, defaults, and the Codex path (no
-non-interactive plugin-install step there yet):
-  https://github.com/memgraph/ai-toolkit/tree/main/context-graph#getting-started-claude-code
+and verifies with doctor. Full env var list and defaults:
+  https://github.com/memgraph/ai-toolkit/tree/main/context-graph#getting-started-claude-code-or-codex
 
 Every real session then writes Memory/Action/Skill nodes automatically, the
 same nodes ai-memory.py just wrote by hand.
