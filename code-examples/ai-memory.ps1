@@ -18,14 +18,15 @@
 #
 # The point is the interconnection: semantic fact -> episodic event -> procedural
 # response. This script seeds all three for the page's own example ("Schedule a
-# follow-up with the client like last time") and recalls them by traversal.
+# follow-up with the client like last time") and recalls them by traversal --
+# using the actual Context Graph packages a live coding-assistant plugin uses
+# (github.com/memgraph/ai-toolkit/tree/main/context-graph), not a hand-rolled
+# schema:
+#   - sessions-graph : semantic memory  -- durable, user-owned facts
+#   - actions-graph   : episodic memory -- timestamped session/action history
+#   - skills-graph    : procedural memory -- named, reusable how-tos
 #
-# Uses ONLY the Memgraph ecosystem (the "build custom" path from the page):
-#   - memgraph/memgraph-mage : the graph database that stores the memory
-#   - memgraph/mcp-memgraph  : the MCP server your harness loads to read/write it
-#   - memgraph/mgconsole     : Memgraph's CLI, used here to seed + query memory
-#
-# Requirements: Docker Desktop only. No API keys, no Python.
+# Requirements: Docker Desktop + Python 3.10-3.13.
 #   Docker Desktop: https://docs.docker.com/desktop/install/windows-install/
 #
 # Usage (PowerShell 5.1 or PowerShell 7+):
@@ -56,16 +57,15 @@ if (Test-Path variable:PSNativeCommandUseErrorActionPreference) {
 $OutputEncoding = New-Object System.Text.UTF8Encoding $false
 try { [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding $false } catch { }
 
-# ---- Pinned versions (avoid ':latest' drift) --------------------------------
-$MageImage      = 'memgraph/memgraph-mage:3.12.0'
-$McpImage       = 'memgraph/mcp-memgraph:0.2.0'
-$MgconsoleImage = 'memgraph/mgconsole:1.6.0'
+# ---- Pinned version (avoid ':latest' drift) ---------------------------------
+$MageImage = 'memgraph/memgraph-mage:3.12.0'
 
 $Net      = 'aimemory-net'
 $Db       = 'aimemory-memgraph'
-$Mcp      = 'aimemory-mcp'
 $BoltPort = '7687'
-$McpPort  = '8000'
+
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$Venv = Join-Path $ScriptDir '.ai-memory-venv'
 
 # ---- Helpers ----------------------------------------------------------------
 function Write-Step {
@@ -75,23 +75,25 @@ function Write-Step {
 }
 
 function Invoke-Cypher {
-    # Run one or more Cypher statements against Memgraph and show the result.
+    # Run one or more Cypher statements against Memgraph and show the result,
+    # reusing the mgconsole already bundled in the memgraph-mage image.
     param([Parameter(Mandatory = $true)][string]$Cypher)
-    $Cypher | docker run -i --rm --network $Net $MgconsoleImage --host $Db --port $BoltPort
+    $Cypher | docker exec -i $Db mgconsole --host 127.0.0.1 --port $BoltPort
     if ($LASTEXITCODE -ne 0) { throw "mgconsole exited with code $LASTEXITCODE" }
 }
 
 function Test-Cypher {
     # Same, but silent: used to poll until Memgraph accepts Bolt connections.
     param([string]$Cypher = 'RETURN 1;')
-    $Cypher | docker run -i --rm --network $Net $MgconsoleImage --host $Db --port $BoltPort *> $null
+    $Cypher | docker exec -i $Db mgconsole --host 127.0.0.1 --port $BoltPort *> $null
     return ($LASTEXITCODE -eq 0)
 }
 
 function Remove-Demo {
-    Write-Step 'Stopping and removing containers + network'
-    docker rm -f $Mcp $Db *> $null
+    Write-Step 'Stopping and removing container + network'
+    docker rm -f $Db *> $null
     docker network rm $Net *> $null
+    if (Test-Path $Venv) { Remove-Item -Recurse -Force $Venv }
     $global:LASTEXITCODE = 0   # nothing to remove is not a failure
     Write-Host 'Cleaned up.'
 }
@@ -102,15 +104,36 @@ if ($Command -eq 'clean') {
     exit 0
 }
 
-# ---- 0. Prerequisite check --------------------------------------------------
+# ---- 0. Prerequisite checks --------------------------------------------------
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
     Write-Error 'Docker is required: https://docs.docker.com/desktop/install/windows-install/'
     exit 1
 }
 
-# ---- 1a. Spin up Memgraph (the memory store) --------------------------------
+# Prefer the "py" launcher (the standard python.org install on Windows) asking
+# it directly for an interpreter path, so $PyBin is always a single concrete
+# executable regardless of which selector matched.
+$PyBin = $null
+if (Get-Command py -ErrorAction SilentlyContinue) {
+    foreach ($verFlag in @('-3.13', '-3.12', '-3.11', '-3.10')) {
+        $exe = & py $verFlag -c 'import sys; print(sys.executable)' 2>$null
+        if ($LASTEXITCODE -eq 0 -and $exe) { $PyBin = $exe; break }
+    }
+}
+if (-not $PyBin -and (Get-Command python -ErrorAction SilentlyContinue)) {
+    $verOut = & python -c 'import sys;print("%d.%d"%sys.version_info[:2])' 2>$null
+    if (@('3.10', '3.11', '3.12', '3.13') -contains $verOut) {
+        $PyBin = (Get-Command python).Source
+    }
+}
+if (-not $PyBin) {
+    Write-Error 'Python 3.10-3.13 is required: https://www.python.org/downloads/'
+    exit 1
+}
+
+# ---- 1. Spin up Memgraph (the memory store) ----------------------------------
 Write-Step "Creating network + starting Memgraph ($MageImage)"
-docker rm -f $Db $Mcp *> $null
+docker rm -f $Db *> $null
 docker network create $Net *> $null
 $LASTEXITCODE = 0
 
@@ -119,89 +142,29 @@ docker run -d --name $Db --network $Net `
     $MageImage --schema-info-enabled=True *> $null
 if ($LASTEXITCODE -ne 0) { throw 'Failed to start Memgraph.' }
 
-Write-Step 'Waiting for Memgraph to accept Bolt connections'
+Write-Step 'Waiting for Memgraph to be ready (Bolt-aware check)'
 while (-not (Test-Cypher)) { Start-Sleep -Seconds 1 }
 Write-Host "Memgraph is up on bolt://localhost:${BoltPort}"
 
-# ---- 1b. Load the harness's memory tool (Memgraph MCP server) ---------------
-# Your coding assistant / agent (the "harness") loads this MCP server as a tool.
-# It then WRITES what it learns each session and READS it back later. Here we
-# start the same server so a harness can attach; the seeding below simulates
-# what the harness writes.
-Write-Step "Starting the Memgraph MCP server ($McpImage), the memory tool your harness loads"
-docker run -d --name $Mcp --network $Net `
-    -p "${McpPort}:8000" `
-    --env MEMGRAPH_URL="bolt://${Db}:7687" `
-    $McpImage *> $null
-if ($LASTEXITCODE -ne 0) { throw 'Failed to start the MCP server.' }
-Write-Host "MCP server (streamable HTTP) at http://localhost:${McpPort}/mcp/"
+# ---- 2. Install the Context Graph memory packages ----------------------------
+$pyVersion = & $PyBin --version
+Write-Step "Creating a Python virtualenv ($pyVersion) and installing sessions-graph, actions-graph, skills-graph"
+if (Test-Path $Venv) { Remove-Item -Recurse -Force $Venv }
+& $PyBin -m venv $Venv
+$VenvPython = Join-Path $Venv 'Scripts\python.exe'
+if (-not (Test-Path $VenvPython)) { $VenvPython = Join-Path $Venv 'bin/python' }
+& $VenvPython -m pip install --quiet --upgrade pip
+& $VenvPython -m pip install --quiet sessions-graph actions-graph skills-graph memgraph-toolbox
 
-# ---- 2. Write the three memory types ----------------------------------------
-# Scenario from the page: the assistant has worked with a client before and knows
-# how to schedule follow-ups. That knowledge is split across the three memories.
-Write-Step 'Writing semantic, episodic, and procedural memory'
-Invoke-Cypher @'
-CREATE CONSTRAINT ON (c:Client) ASSERT c.name IS UNIQUE;
+# ---- 3. Write and recall the three memory types ------------------------------
+Write-Step 'Writing and recalling semantic, episodic, and procedural memory'
+$env:MEMGRAPH_URL = "bolt://localhost:${BoltPort}"
+& $VenvPython (Join-Path $ScriptDir 'ai-memory.py')
+$pyExit = $LASTEXITCODE
+Remove-Item Env:\MEMGRAPH_URL
+if ($pyExit -ne 0) { throw 'ai-memory.py failed.' }
 
-// --- Semantic memory: what the system KNOWS (facts + preferences) ---
-MERGE (c:Client {name: "Acme Corp"}) SET c.contact = "Dana Lee", c.timezone = "America/New_York";
-MERGE (p:Preference {kind: "meeting_length", value: "30 min"});
-MATCH (c:Client {name:"Acme Corp"}), (p:Preference {kind:"meeting_length"})
-  MERGE (c)-[:PREFERS]->(p);
-
-// --- Episodic memory: what the system EXPERIENCED (interactions over time) ---
-MERGE (m1:Interaction {id:"int-1", kind:"meeting", weekday:"Tuesday", duration:"30 min", when:"2026-06-30", summary:"kickoff"});
-MERGE (m2:Interaction {id:"int-2", kind:"meeting", weekday:"Tuesday", duration:"30 min", when:"2026-07-07", summary:"follow-up"});
-MATCH (m1:Interaction {id:"int-1"}), (c:Client {name:"Acme Corp"}) MERGE (m1)-[:WITH]->(c);
-MATCH (m2:Interaction {id:"int-2"}), (c:Client {name:"Acme Corp"}) MERGE (m2)-[:WITH]->(c);
-MATCH (m1:Interaction {id:"int-1"}), (m2:Interaction {id:"int-2"}) MERGE (m1)-[:NEXT]->(m2);  // sequence
-
-// --- Procedural memory: what the system KNOWS HOW TO DO (a workflow) ---
-MERGE (w:Workflow {name:"schedule_follow_up"});
-MERGE (s1:Step {name:"book calendar slot"});
-MERGE (s2:Step {name:"send invite"});
-MATCH (w:Workflow {name:"schedule_follow_up"}), (s1:Step {name:"book calendar slot"}) MERGE (w)-[:STARTS_WITH]->(s1);
-MATCH (s1:Step {name:"book calendar slot"}), (s2:Step {name:"send invite"}) MERGE (s1)-[:THEN]->(s2);  // transition
-'@
-Write-Host 'Wrote semantic + episodic + procedural memory.'
-
-# ---- 3. Recall each memory type, then all three together --------------------
-Write-Step "Semantic recall: 'What do we know about the client?'"
-Invoke-Cypher @'
-MATCH (c:Client {name:"Acme Corp"})-[:PREFERS]->(p:Preference)
-RETURN c.contact AS client, c.timezone AS timezone, p.value AS preferred_length;
-'@
-
-Write-Step "Episodic recall: 'What happened last time?' (most recent interaction)"
-Invoke-Cypher @'
-MATCH (i:Interaction)-[:WITH]->(:Client {name:"Acme Corp"})
-RETURN i.when AS date, i.weekday AS weekday, i.duration AS duration, i.summary AS summary
-ORDER BY i.when DESC LIMIT 1;
-'@
-
-Write-Step "Procedural recall: 'How do we schedule a follow-up?' (steps in order)"
-Invoke-Cypher @'
-MATCH (:Workflow {name:"schedule_follow_up"})-[:STARTS_WITH]->(first:Step)
-MATCH p=(first)-[:THEN*0..]->(s:Step)
-WITH s, length(p) AS ord ORDER BY ord
-RETURN collect(s.name) AS steps;
-'@
-
-Write-Step "Interconnected recall: 'Schedule a follow-up with the client like last time.'"
-# One traversal joins semantic (client + timezone) + episodic (last meeting) +
-# procedural (the workflow steps): semantic fact -> episodic event -> procedural response.
-Invoke-Cypher @'
-MATCH (c:Client {name:"Acme Corp"})
-MATCH (last:Interaction)-[:WITH]->(c)
-WITH c, last ORDER BY last.when DESC LIMIT 1
-MATCH (:Workflow {name:"schedule_follow_up"})-[:STARTS_WITH]->(f:Step)
-MATCH pth=(f)-[:THEN*0..]->(st:Step)
-WITH c, last, st, length(pth) AS o ORDER BY o
-RETURN c.contact AS client, c.timezone AS timezone,
-       last.weekday AS like_last_time_day, last.duration AS duration,
-       collect(st.name) AS actions;
-'@
-
+# ---- 4. Inspect the memory ontology -------------------------------------------
 Write-Step 'Memory ontology via SHOW SCHEMA INFO (returned in constant time)'
 try {
     Invoke-Cypher 'SHOW SCHEMA INFO;'
@@ -213,28 +176,40 @@ try {
 Write-Host ''
 Write-Host "$([char]0x2713) AI memory is live." -ForegroundColor Green
 Write-Host @"
-The assistant can now answer "like last time" by traversing: semantic (Acme Corp,
-New York) -> episodic (last meeting: 30 min, Tuesday) -> procedural (book calendar
-slot, send invite).
+The assistant can now answer "like last time" by traversing: semantic (Acme
+Corp, New York) -> episodic (last session: follow-up meeting) -> procedural
+(schedule-follow-up skill).
 
 Explore the memory graph visually with Memgraph Lab:
   docker run -d --name aimemory-lab --network $Net -p 3000:3000 -e QUICK_CONNECT_MG_HOST=$Db -e QUICK_CONNECT_MG_PORT=7687 memgraph/lab:3.12.0
   start http://localhost:3000     # then run:  MATCH p=()-[]-() RETURN p;
 
-Wire the memory into a real harness (so it collects sessions automatically).
-Add this to your MCP client config (e.g. Claude Desktop / Cursor / VS Code):
+Wire this into a REAL harness so it collects sessions automatically (no seeding
+by hand). One script installs and wires the Context Graph plugin for Claude
+Code or Codex end to end, defaulting to this same Memgraph instance
+(bolt://localhost:$BoltPort, no auth, database memgraph) -- run it from WSL or
+Git Bash (no native PowerShell port yet):
 
-  {
-    "mcpServers": {
-      "memgraph-memory": {
-        "url": "http://localhost:${McpPort}/mcp/"
-      }
-    }
-  }
+  curl -fsSL https://raw.githubusercontent.com/memgraph/ai-toolkit/main/context-graph/scripts/install.sh | bash
+  # Codex instead of Claude Code:
+  CONTEXT_GRAPH_RUNTIME=codex bash -c "`$(curl -fsSL https://raw.githubusercontent.com/memgraph/ai-toolkit/main/context-graph/scripts/install.sh)"
 
-Your assistant then calls the MCP tools (run_query, get_schema, ...) to write new
-semantic/episodic/procedural memory and recall it, exactly as the seeding did.
+It registers the runtime's plugin marketplace, installs the plugin (the step a
+bare 'agent-context-graph bootstrap' can't do -- that's what wires hooks into
+the runtime), installs the CLI with all three connectors, sets your identity
+(defaults to your git user.name; override with AGENT_CONTEXT_GRAPH_USER_ID),
+and verifies with doctor. Full env var list and defaults:
+  https://github.com/memgraph/ai-toolkit/tree/main/context-graph#getting-started-claude-code-or-codex
+
+Every real session then writes Memory/Action/Skill nodes automatically, the
+same nodes ai-memory.py just wrote by hand.
 
 Tear everything down when you are done:
   .\ai-memory.ps1 clean
+
+If you ran the installer above, mind the order: the plugin keeps writing to
+whatever answers on bolt://localhost:$BoltPort, which is this container. Removing it
+leaves the hooks with nowhere to write. Either hold off until you are done with
+the plugin, or re-run install.sh afterwards -- with nothing reachable it starts
+a Memgraph of its own on the same port.
 "@

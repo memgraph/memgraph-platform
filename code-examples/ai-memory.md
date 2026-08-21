@@ -12,28 +12,36 @@ Memgraph models three kinds of long-term memory as one unified graph:
 
 | Memory type | What it holds | How it is stored |
 | --- | --- | --- |
-| **Semantic** | What the system **knows** (facts, preferences) | Entities with typed relationships |
-| **Episodic** | What the system **experienced** (past interactions, time) | Interaction nodes encoding sequence and consequence |
-| **Procedural** | What the system **knows how to do** (workflows) | Steps as nodes, transitions as edges |
+| **Semantic** | What the system **knows** (facts, preferences) | `(:User)-[:HAS_MEMORY]->(:Memory)` |
+| **Episodic** | What the system **experienced** (past interactions, time) | `(:Session)-[:HAS_ACTION]->(:Action)`, sequenced by `FOLLOWED_BY` |
+| **Procedural** | What the system **knows how to do** (workflows) | `(:Session)-[:USED_SKILL]->(:Skill)` |
 
-The value is the **interconnection**: *semantic fact → episodic event →
-procedural response*. This example seeds all three for the page's own scenario
-and answers it by traversal.
+This example writes and reads all three through the actual
+[Context Graph](https://github.com/memgraph/ai-toolkit/tree/main/context-graph)
+packages a live coding-assistant plugin uses — `sessions-graph`, `actions-graph`,
+`skills-graph` — instead of a hand-rolled schema. The `(:User)`/`(:Session)`
+nodes those three packages share are the join key, so the payoff is a genuine
+graph traversal, not three separate lookups glued together.
 
 ## High-level Plan
 
-1. **Spin up** the memory store (Memgraph) and the MCP server your harness loads.
-2. **Write** the three memory types for a client the assistant has worked with.
-3. **Recall** each type, then all three together to answer *"Schedule a follow-up
-   with the client like last time."*
+1. **Spin up** the memory store (Memgraph).
+2. **Write** the three memory types for a client the assistant has worked with,
+   through `sessions-graph`/`actions-graph`/`skills-graph`.
+3. **Recall** each type, then all three together to answer *"Schedule a
+   follow-up with the client like last time."*
 
 ## What You Need
 
 - **Docker**: https://docs.docker.com/get-docker/
+- **Python 3.10-3.13**: https://www.python.org/downloads/ (installs the three
+  Context Graph packages above from PyPI into a throwaway virtualenv — no
+  repository checkout needed)
 
-That is it. No API keys and no Python: everything runs through Memgraph's own
-images (`memgraph-mage`, `mcp-memgraph`, `mgconsole`). This is the "build custom"
-path from the page (Cypher, MAGE, MCP).
+No API keys: this example writes structured memory directly, the same way an
+application would call these packages. Automatic, LLM-backed extraction from
+raw conversation text is a separate, opt-in step — see
+[Where to Go Next](#where-to-go-next).
 
 ## Run It
 
@@ -56,10 +64,10 @@ If Windows blocks the script, allow local scripts for the session first:
 
 ## Step-by-step
 
-### 1. Spin up Memgraph and the MCP server
+### 1. Spin up Memgraph
 
-Memgraph starts with schema info enabled (so the ontology is queryable), and the
-MCP server, the tool your harness loads to read and write memory, is pointed at it:
+Memgraph starts with schema info enabled, so the ontology is queryable once the
+Context Graph packages have written into it:
 
 ```bash
 docker network create aimemory-net
@@ -67,84 +75,87 @@ docker network create aimemory-net
 docker run -d --name aimemory-memgraph --network aimemory-net \
   -p 7687:7687 -p 7444:7444 \
   memgraph/memgraph-mage:3.12.0 --schema-info-enabled=True
-
-docker run -d --name aimemory-mcp --network aimemory-net \
-  -p 8000:8000 --env MEMGRAPH_URL=bolt://aimemory-memgraph:7687 \
-  memgraph/mcp-memgraph:0.2.0
 ```
 
-### 2. Write the three memory types
+### 2. Install the Context Graph memory packages
 
-The assistant has met a client before and knows how to schedule follow-ups. That
-knowledge is split across the three memories:
+```bash
+python3 -m venv .ai-memory-venv
+.ai-memory-venv/bin/pip install sessions-graph actions-graph skills-graph memgraph-toolbox
+```
+
+### 3. Write the three memory types
+
+The assistant has met a client before and knows how to schedule follow-ups.
+That knowledge is split across three packages, glued together by a shared
+`(:User {user_id})` and two `(:Session {session_id})` nodes
+(`session-acme-kickoff`, `session-acme-followup`) — see `ai-memory.py`:
+
+```python
+# Episodic: two real sessions, each with a ToolCall/ToolResult (actions-graph)
+actions.create_session(Session(session_id="session-acme-kickoff", ...))
+actions.create_session(Session(session_id="session-acme-followup", ...))
+actions.record_tool_call(session_id=..., tool_name="schedule_meeting", tool_input={...})
+actions.record_tool_result(session_id=..., tool_use_id=..., tool_name="schedule_meeting", ...)
+
+# Semantic: a durable fact about the client (sessions-graph)
+memories.save_memory(
+    user_id="acme-corp",
+    content="Acme Corp's contact is Dana Lee (timezone America/New_York); they prefer 30-minute meetings.",
+    session_id="session-acme-kickoff",
+)
+
+# Procedural: a reusable skill, used during the follow-up session (skills-graph)
+skills.add_skill(Skill(name="schedule-follow-up", description="...", content="1. Book a calendar slot...\n2. Send a calendar invite."))
+skills.record_skill_usage(session_id="session-acme-followup", skill_name="schedule-follow-up", action="used", timestamp=...)
+```
+
+Run it:
+
+```bash
+MEMGRAPH_URL=bolt://localhost:7687 .ai-memory-venv/bin/python ai-memory.py
+```
+
+### 4. Recall
+
+Each memory type is a small, package-provided lookup:
+
+```python
+memories.get_memories("acme-corp")               # semantic
+actions.list_sessions(limit=1)                    # episodic: most recent session
+actions.get_session_actions(session.session_id)   # ... and what happened in it
+skills.get_skill("schedule-follow-up")            # procedural
+```
+
+The payoff is the **interconnected** recall: one Cypher traversal through the
+shared `User`/`Session` nodes joins all three to answer *"schedule a follow-up
+with the client like last time"*:
 
 ```cypher
-// Semantic: what the system KNOWS
-MERGE (c:Client {name: "Acme Corp"}) SET c.contact = "Dana Lee", c.timezone = "America/New_York";
-MERGE (p:Preference {kind: "meeting_length", value: "30 min"});
-MATCH (c:Client {name:"Acme Corp"}), (p:Preference {kind:"meeting_length"}) MERGE (c)-[:PREFERS]->(p);
-
-// Episodic: what the system EXPERIENCED (with a sequence edge)
-MERGE (m1:Interaction {id:"int-1", weekday:"Tuesday", duration:"30 min", when:"2026-06-30", summary:"kickoff"});
-MERGE (m2:Interaction {id:"int-2", weekday:"Tuesday", duration:"30 min", when:"2026-07-07", summary:"follow-up"});
-MATCH (m1:Interaction {id:"int-1"}), (m2:Interaction {id:"int-2"}) MERGE (m1)-[:NEXT]->(m2);
-
-// Procedural: what the system KNOWS HOW TO DO (steps + transitions)
-MERGE (w:Workflow {name:"schedule_follow_up"});
-MERGE (s1:Step {name:"book calendar slot"}); MERGE (s2:Step {name:"send invite"});
-MATCH (w:Workflow {name:"schedule_follow_up"}), (s1:Step {name:"book calendar slot"}) MERGE (w)-[:STARTS_WITH]->(s1);
-MATCH (s1:Step {name:"book calendar slot"}), (s2:Step {name:"send invite"}) MERGE (s1)-[:THEN]->(s2);
+MATCH (u:User {user_id: "acme-corp"})-[:HAS_MEMORY]->(mem:Memory)
+MATCH (u)-[:HAD_SESSION]->(s:Session)-[:HAS_ACTION]->(a:Action {tool_name: "schedule_meeting"})
+WITH u, mem, s, a ORDER BY s.started_at DESC LIMIT 1
+OPTIONAL MATCH (s)-[:USED_SKILL]->(sk:Skill)
+RETURN mem.content AS client_facts, s.session_id AS last_session,
+       a.timestamp AS last_meeting_at, sk.name AS skill, sk.content AS how_to
 ```
 
-### 3. Recall
+It returns *Dana Lee's Acme Corp facts, the `session-acme-followup` session,
+the `schedule-follow-up` skill and its steps* — everything needed for the
+assistant to reply *"Done. 30 min Tuesday slot booked, invite sent."*
 
-Each memory type is a small traversal:
-
-```cypher
--- Semantic: what do we know about the client?
-MATCH (c:Client {name:"Acme Corp"})-[:PREFERS]->(p:Preference)
-RETURN c.contact, c.timezone, p.value;
-
--- Episodic: what happened last time?
-MATCH (i:Interaction)-[:WITH]->(:Client {name:"Acme Corp"})
-RETURN i.when, i.weekday, i.duration ORDER BY i.when DESC LIMIT 1;
-
--- Procedural: how do we schedule a follow-up?
-MATCH (:Workflow {name:"schedule_follow_up"})-[:STARTS_WITH]->(first:Step)
-MATCH p=(first)-[:THEN*0..]->(s:Step)
-WITH s, length(p) AS ord ORDER BY ord RETURN collect(s.name) AS steps;
-```
-
-The payoff is the **interconnected** recall, one traversal that joins all three to
-answer *"schedule a follow-up with the client like last time"*:
-
-```cypher
-MATCH (c:Client {name:"Acme Corp"})
-MATCH (last:Interaction)-[:WITH]->(c)
-WITH c, last ORDER BY last.when DESC LIMIT 1
-MATCH (:Workflow {name:"schedule_follow_up"})-[:STARTS_WITH]->(f:Step)
-MATCH pth=(f)-[:THEN*0..]->(st:Step)
-WITH c, last, st, length(pth) AS o ORDER BY o
-RETURN c.contact AS client, c.timezone AS timezone,
-       last.weekday AS like_last_time_day, last.duration AS duration,
-       collect(st.name) AS actions;
-```
-
-It returns *Dana Lee, America/New_York, Tuesday, 30 min, [book calendar slot,
-send invite]*, everything needed for the assistant to reply *"Done. 30 min Tuesday
-slot booked, invite sent."*
-
-### 4. Inspect the memory ontology
+### 5. Inspect the memory ontology
 
 `SHOW SCHEMA INFO` returns the whole ontology (labels, relationship types,
 properties) in constant time, so an agent can learn the shape of memory before
-querying it:
+querying it — now the real `User`/`Session`/`Memory`/`Action`/`Skill` schema
+the Context Graph packages created, not a demo-only schema:
 
 ```cypher
 SHOW SCHEMA INFO;
 ```
 
-### 5. Explore visually (optional)
+### 6. Explore visually (optional)
 
 ```bash
 docker run -d --name aimemory-lab --network aimemory-net -p 3000:3000 \
@@ -155,24 +166,32 @@ docker run -d --name aimemory-lab --network aimemory-net -p 3000:3000 \
 
 ## Wire It Into a Real Harness
 
-The seeding above did by hand what your assistant should do automatically. Point
-an MCP-capable harness (Claude Desktop, Cursor, VS Code, ...) at the running MCP
-server and it can call `run_query`, `get_schema`, and the other tools to write new
-semantic/episodic/procedural memory and recall it:
+The seeding above did by hand what a real coding-assistant plugin does
+automatically. One script installs and wires the
+[Context Graph](https://github.com/memgraph/ai-toolkit/tree/main/context-graph)
+plugin end to end for Claude Code or Codex, defaulting to this same Memgraph
+instance (`bolt://localhost:7687`, no auth, database `memgraph`):
 
-```json
-{
-  "mcpServers": {
-    "memgraph-memory": {
-      "url": "http://localhost:8000/mcp/"
-    }
-  }
-}
+```bash
+curl -fsSL https://raw.githubusercontent.com/memgraph/ai-toolkit/main/context-graph/scripts/install.sh | bash
+# Codex instead of Claude Code:
+CONTEXT_GRAPH_RUNTIME=codex bash -c "$(curl -fsSL https://raw.githubusercontent.com/memgraph/ai-toolkit/main/context-graph/scripts/install.sh)"
 ```
 
-A hook in your harness that writes each session's facts, events, and workflows
-through `run_query` on exit is the "plugin that collects sessions." On the next
-session, the assistant reads that memory back before it starts.
+It registers the runtime's plugin marketplace and installs the plugin — the
+step a bare `agent-context-graph bootstrap` can't do, since that's what
+actually wires hooks into the runtime — installs the CLI with all three
+connectors, sets your identity, and verifies with `doctor`. It even starts
+Memgraph itself if nothing's reachable, so on a clean machine it doubles as
+an alternative to steps 1–2 above. Override identity with
+`AGENT_CONTEXT_GRAPH_USER_ID` (defaults to `git config user.name`); see the
+[Context Graph guide](https://github.com/memgraph/ai-toolkit/blob/main/context-graph/README.md#getting-started-claude-code-or-codex)
+for the rest of the configurable env vars and defaults, reconciliation, and
+cross-component queries.
+
+Every real session then writes `Memory`/`Action`/`Skill` nodes automatically —
+the same nodes `ai-memory.py` just wrote by hand — and the next session reads
+that memory back before it starts.
 
 ## Clean Up
 
@@ -182,15 +201,26 @@ session, the assistant reads that memory back before it starts.
 docker rm -f aimemory-lab
 ```
 
+If you ran the installer above, mind the order: the plugin keeps writing to
+whatever answers on `bolt://localhost:7687` — which is this demo's container.
+Removing it leaves the hooks with nowhere to write. Either hold off until you're
+done with the plugin, or re-run `install.sh` afterwards — with nothing reachable
+it starts a Memgraph of its own on the same port.
+
 ## Where to Go Next
 
 - [Memgraph AI Memory](https://memgraph.com/ai-memory) (the three memory types and
   the graph-vs-vector argument).
-- Add **semantic recall by similarity**: store an embedding per memory node and use
-  Memgraph [vector search](https://memgraph.com/docs/querying/vector-search)
-  (`search_node_vectors` is exposed by the MCP server) alongside traversal.
+- Turn on **automatic, LLM-backed extraction**: this example wrote Memory nodes
+  by hand; `sessions-graph`'s reconciliation step instead extracts entities
+  from real session transcripts via `unstructured2graph` + LightRAG — see
+  [sessions-graph § reconciliation](https://github.com/memgraph/ai-toolkit/blob/main/context-graph/sessions-graph/README.md#session-reconciliation).
+- Add **semantic recall by similarity**: `sessions-graph` already maintains a
+  full-text index over `Memory.content`; pair it with Memgraph
+  [vector search](https://memgraph.com/docs/querying/vector-search) for
+  embedding-based recall alongside traversal.
 - Retrieve memory with the same [GraphRAG](https://memgraph.com/graphrag) pipelines
   (Text2Cypher, pivot search, query-focused summarisation); see
   `agentic-graphrag.sh` in this folder.
-- Read the [Memgraph MCP server](https://memgraph.com/blog/introducing-memgraph-mcp-server)
-  and [AI ecosystem](https://memgraph.com/docs/ai-ecosystem) docs.
+- Read the [Context Graph](https://github.com/memgraph/ai-toolkit/tree/main/context-graph)
+  project docs and [AI ecosystem](https://memgraph.com/docs/ai-ecosystem) docs.
