@@ -201,6 +201,12 @@ that memory back before it starts.
 docker rm -f aimemory-lab
 ```
 
+If you ran the installer above, mind the order: the plugin keeps writing to
+whatever answers on `bolt://localhost:7687` — which is this demo's container.
+Removing it leaves the hooks with nowhere to write. Either hold off until you're
+done with the plugin, or re-run `install.sh` afterwards — with nothing reachable
+it starts a Memgraph of its own on the same port.
+
 ## Where to Go Next
 
 - [Memgraph AI Memory](https://memgraph.com/ai-memory) (the three memory types and

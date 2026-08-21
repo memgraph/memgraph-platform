@@ -159,4 +159,10 @@ same nodes ai-memory.py just wrote by hand.
 
 Tear everything down when you are done:
   ./ai-memory.sh clean
+
+If you ran the installer above, mind the order: the plugin keeps writing to
+whatever answers on bolt://localhost:${BOLT_PORT}, which is this container. Removing it
+leaves the hooks with nowhere to write. Either hold off until you are done with
+the plugin, or re-run install.sh afterwards -- with nothing reachable it starts
+a Memgraph of its own on the same port.
 EOF
