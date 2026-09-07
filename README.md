@@ -35,13 +35,13 @@ docker exec -ti <container-id> mgconsole
 
 ## :bulb: Code examples
 
-Each example is a self-contained, end-to-end demo: it starts Memgraph in Docker, loads data, and runs real queries. Docker is the only requirement (AI Memory also needs Python 3.10-3.13). The walkthroughs live in [`code-examples/`](https://github.com/memgraph/memgraph-platform/blob/main/code-examples/README.md).
+Each example is a runnable version of one of the [Memgraph use cases](https://memgraph.com/use-cases): [GraphRAG](https://memgraph.com/graphrag), [AI Memory](https://memgraph.com/ai-memory) and [Agentic AI](https://memgraph.com/agentic-ai). Each is a self-contained, end-to-end demo: it starts Memgraph in Docker, loads data, and runs real queries. Docker is the only requirement (AI Memory also needs Python 3.10-3.13). The walkthroughs live in [`code-examples/`](https://github.com/memgraph/memgraph-platform/blob/main/code-examples/README.md).
 
 | Example | Linux/macOS | Windows |
 | --- | --- | --- |
-| [Agentic AI](https://github.com/memgraph/memgraph-platform/blob/main/code-examples/agentic-ai.md) | `curl -sSL https://install.memgraph.com/agentic-ai \| bash` | `iwr https://install.memgraph.com/agentic-ai/windows -useb \| iex` |
 | [Agentic GraphRAG](https://github.com/memgraph/memgraph-platform/blob/main/code-examples/agentic-graphrag.md) | `curl -sSL https://install.memgraph.com/agentic-graphrag \| bash` | `iwr https://install.memgraph.com/agentic-graphrag/windows -useb \| iex` |
 | [AI Memory](https://github.com/memgraph/memgraph-platform/blob/main/code-examples/ai-memory.md) | `curl -sSL https://install.memgraph.com/ai-memory \| bash` | `iwr https://install.memgraph.com/ai-memory/windows -useb \| iex` |
+| [Agentic AI](https://github.com/memgraph/memgraph-platform/blob/main/code-examples/agentic-ai.md) | `curl -sSL https://install.memgraph.com/agentic-ai \| bash` | `iwr https://install.memgraph.com/agentic-ai/windows -useb \| iex` |
 
 The one-liners run the script straight from the web. To tear an example down, run the downloaded script with `clean` (e.g. `./agentic-ai.sh clean` or `.\agentic-ai.ps1 clean`), or run the docker commands the example prints at the end.
 
