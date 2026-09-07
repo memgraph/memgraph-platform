@@ -24,8 +24,12 @@
 #   - actions-graph   : episodic memory -- timestamped session/action history
 #   - skills-graph    : procedural memory -- named, reusable how-tos
 #
-# Requirements: Docker + Python 3.10-3.13.
-#   Docker: https://docs.docker.com/get-docker/
+# Requirements -- two things you install once, yourself; the script checks for
+# both up front and prints how to get them if they are missing:
+#   - Docker           : https://docs.docker.com/get-docker/
+#   - Python 3.10-3.13 : https://www.python.org/downloads/
+# Everything below that (the Memgraph image, the Python packages) the script
+# installs on its own, into a throwaway virtualenv next to this file.
 #
 # Usage:
 #   ./ai-memory.sh          # bring everything up, seed memory, run recall
@@ -33,11 +37,13 @@
 
 set -euo pipefail
 
-# ---- Pinned version (avoid ':latest' drift) ---------------------------------
+# ---- Pinned versions (avoid ':latest' drift) ---------------------------------
 MAGE_IMAGE="memgraph/memgraph-mage:3.12.0"
+LAB_IMAGE="memgraph/lab:3.12.0"
 
 NET="aimemory-net"
 DB="aimemory-memgraph"
+LAB="aimemory-lab"
 BOLT_PORT="7687"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -55,6 +61,7 @@ query() {
 teardown() {
   log "Stopping and removing container + network"
   docker rm -f "$DB" >/dev/null 2>&1 || true
+  docker rm -f "$LAB" >/dev/null 2>&1 || true
   docker network rm "$NET" >/dev/null 2>&1 || true
   rm -rf "$VENV"
   echo "Cleaned up."
@@ -67,10 +74,27 @@ if [[ "${1:-}" == "clean" ]]; then
 fi
 
 # ---- 0. Prerequisite checks --------------------------------------------------
-command -v docker >/dev/null 2>&1 || {
-  echo "Docker is required: https://docs.docker.com/get-docker/" >&2
+# Only the two high-level dependencies are checked (never installed) here: a
+# container engine and a language runtime are the user's call. The low-level
+# dependencies -- the Memgraph image and the Python packages -- are installed
+# automatically further down.
+fatal() {
+  printf '\n\033[1;31m%s\033[0m\n' "$1" >&2
+  shift
+  for hint in "$@"; do printf '  %s\n' "$hint" >&2; done
+  echo >&2
   exit 1
 }
+
+command -v docker >/dev/null 2>&1 || fatal \
+  "Missing dependency: Docker (the memory store runs in a container)." \
+  "Install it: https://docs.docker.com/get-docker/" \
+  "Then re-run: ./ai-memory.sh"
+
+docker info >/dev/null 2>&1 || fatal \
+  "Docker is installed, but its engine is not responding." \
+  "Start Docker (Docker Desktop, colima, or your daemon of choice)," \
+  "then re-run: ./ai-memory.sh"
 
 PYBIN=""
 for cand in python3.13 python3.12 python3.11 python3.10; do
@@ -82,8 +106,11 @@ if [[ -z "$PYBIN" ]] && command -v python3 >/dev/null 2>&1; then
   esac
 fi
 if [[ -z "$PYBIN" ]]; then
-  echo "Python 3.10-3.13 is required: https://www.python.org/downloads/" >&2
-  exit 1
+  fatal "Missing dependency: Python 3.10-3.13 (runs the memory client)." \
+    "Install it: https://www.python.org/downloads/" \
+    "macOS:      brew install python@3.12" \
+    "Debian etc: sudo apt install python3.12 python3.12-venv" \
+    "Then re-run: ./ai-memory.sh"
 fi
 
 # ---- 1. Spin up Memgraph (the memory store) ---------------------------------
@@ -134,8 +161,8 @@ by traversing: semantic (Acme Corp, New York) -> episodic (last session:
 follow-up meeting) -> procedural (schedule-follow-up skill).
 
 Explore the memory graph visually with Memgraph Lab:
-  docker run -d --name aimemory-lab --network ${NET} -p 3000:3000 \\
-    -e QUICK_CONNECT_MG_HOST=${DB} -e QUICK_CONNECT_MG_PORT=7687 memgraph/lab:3.12.0
+  docker run -d --name ${LAB} --network ${NET} -p 3000:3000 \\
+    -e QUICK_CONNECT_MG_HOST=${DB} -e QUICK_CONNECT_MG_PORT=7687 ${LAB_IMAGE}
   open http://localhost:3000     # then run:  MATCH p=()-[]-() RETURN p;
 
 Wire this into a REAL harness so it collects sessions automatically (no seeding

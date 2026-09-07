@@ -16,6 +16,9 @@ MEMGRAPH_DATABASE env vars every package in that project reads (defaults to
 bolt://localhost:7687, matching this demo's own container).
 """
 
+import os
+import sys
+
 from actions_graph import ActionsGraph
 from actions_graph.models import ActionStatus, Session
 from memgraph_toolbox.api.memgraph import Memgraph
@@ -28,8 +31,32 @@ FOLLOWUP_SESSION = "session-acme-followup"
 SKILL_NAME = "schedule-follow-up"
 
 
+def _supports_color() -> bool:
+    if not sys.stdout.isatty():
+        return False
+    if os.name != "nt":
+        return True
+    # Windows consoles ignore ANSI escapes until virtual-terminal processing is
+    # switched on, and older ones cannot do it at all -- in which case fall back
+    # to plain text instead of printing "[1;36m" at the user.
+    try:
+        import ctypes
+
+        kernel32 = ctypes.windll.kernel32
+        handle = kernel32.GetStdHandle(-11)  # STD_OUTPUT_HANDLE
+        mode = ctypes.c_uint32()
+        if not kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+            return False
+        return bool(kernel32.SetConsoleMode(handle, mode.value | 0x0004))
+    except Exception:
+        return False
+
+
+CYAN, RESET = ("\033[1;36m", "\033[0m") if _supports_color() else ("", "")
+
+
 def log(msg: str) -> None:
-    print(f"\n\033[1;36m==> {msg}\033[0m")
+    print(f"\n{CYAN}==> {msg}{RESET}")
 
 
 def link_user_session(db: Memgraph, user_id: str, session_id: str) -> None:
