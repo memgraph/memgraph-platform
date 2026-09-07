@@ -66,7 +66,12 @@ $Lab = 'aimemory-lab'
 $BoltPort = '7687'
 $PyWanted = @('3.13', '3.12', '3.11', '3.10')
 
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+# Run from a checkout, ai-memory.py sits next to this script. Piped into `iex`
+# (iwr https://install.memgraph.com/ai-memory/windows -useb | iex) there is no
+# script file and no $PSScriptRoot, so work in the current directory and fetch
+# ai-memory.py from the repo instead.
+$PyUrl = 'https://raw.githubusercontent.com/memgraph/memgraph-platform/main/code-examples/ai-memory.py'
+$ScriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { (Get-Location).Path }
 $Venv = Join-Path $ScriptDir '.ai-memory-venv'
 
 # ---- Helpers ----------------------------------------------------------------
@@ -270,10 +275,24 @@ try {
     if ((Get-ExitCode) -ne 0) { throw 'Failed to install the Context Graph packages from PyPI.' }
 
     # ---- 3. Write and recall the three memory types --------------------------
+    # Use the ai-memory.py next to this script when there is one (checkout);
+    # when piped, download it into the venv so `clean` removes it along with
+    # everything else this script created.
+    $PyFile = Join-Path $ScriptDir 'ai-memory.py'
+    if (-not (Test-Path $PyFile)) {
+        $PyFile = Join-Path $Venv 'ai-memory.py'
+        Write-Step 'Downloading ai-memory.py (the memory client) from the memgraph-platform repo'
+        try {
+            Invoke-WebRequest -Uri $PyUrl -OutFile $PyFile -UseBasicParsing
+        } catch {
+            throw "Could not download ai-memory.py from $PyUrl ($($_.Exception.Message)). Check your network, or clone https://github.com/memgraph/memgraph-platform and run code-examples\ai-memory.ps1"
+        }
+    }
+
     Write-Step 'Writing and recalling semantic, episodic, and procedural memory'
     $env:MEMGRAPH_URL = "bolt://localhost:${BoltPort}"
     try {
-        & $VenvPython (Join-Path $ScriptDir 'ai-memory.py')
+        & $VenvPython $PyFile
         if ((Get-ExitCode) -ne 0) { throw "ai-memory.py exited with code $(Get-ExitCode)." }
     } finally {
         Remove-Item Env:\MEMGRAPH_URL -ErrorAction SilentlyContinue

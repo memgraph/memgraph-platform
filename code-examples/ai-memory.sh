@@ -46,7 +46,16 @@ DB="aimemory-memgraph"
 LAB="aimemory-lab"
 BOLT_PORT="7687"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Run from a checkout, ai-memory.py sits next to this script. Piped into bash
+# (curl -sSL https://install.memgraph.com/ai-memory | bash) there is no script
+# file -- BASH_SOURCE is unset, which bash 3.2 (macOS) rejects under `set -u` --
+# so work in the current directory and fetch ai-memory.py from the repo instead.
+PY_URL="https://raw.githubusercontent.com/memgraph/memgraph-platform/main/code-examples/ai-memory.py"
+if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]:-}" ]]; then
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+else
+  SCRIPT_DIR="$PWD"
+fi
 VENV="$SCRIPT_DIR/.ai-memory-venv"
 
 # ---- Helpers ----------------------------------------------------------------
@@ -146,8 +155,23 @@ rm -rf "$VENV"
 "$VENV/bin/pip" install --quiet sessions-graph actions-graph skills-graph memgraph-toolbox
 
 # ---- 3. Write and recall the three memory types ------------------------------
+# Use the ai-memory.py next to this script when there is one (checkout); when
+# piped, download it into the venv so `clean` removes it along with everything
+# else this script created.
+PY_FILE="$SCRIPT_DIR/ai-memory.py"
+if [[ ! -f "$PY_FILE" ]]; then
+  PY_FILE="$VENV/ai-memory.py"
+  log "Downloading ai-memory.py (the memory client) from the memgraph-platform repo"
+  command -v curl >/dev/null 2>&1 || fatal \
+    "Missing dependency: curl (needed to download ai-memory.py)." \
+    "Install it, or clone https://github.com/memgraph/memgraph-platform and run code-examples/ai-memory.sh"
+  curl -fsSL "$PY_URL" -o "$PY_FILE" || fatal \
+    "Could not download ai-memory.py from $PY_URL" \
+    "Check your network, or clone https://github.com/memgraph/memgraph-platform and run code-examples/ai-memory.sh"
+fi
+
 log "Writing and recalling semantic, episodic, and procedural memory"
-MEMGRAPH_URL="bolt://localhost:${BOLT_PORT}" "$VENV/bin/python" "$SCRIPT_DIR/ai-memory.py"
+MEMGRAPH_URL="bolt://localhost:${BOLT_PORT}" "$VENV/bin/python" "$PY_FILE"
 
 # ---- 4. Inspect the memory ontology ------------------------------------------
 log "Memory ontology via SHOW SCHEMA INFO (returned in constant time)"
