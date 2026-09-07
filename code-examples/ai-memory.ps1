@@ -103,18 +103,44 @@ function Write-Fatal {
     exit 1
 }
 
+function Invoke-MgConsole {
+    # Feed Cypher to the mgconsole bundled in the memgraph-mage image, through a
+    # temp file and cmd-level redirection.
+    #
+    # Piping a PowerShell string straight into `docker exec -i` reads better, but
+    # PowerShell encodes native-command stdin with the console input encoding, and
+    # on a console running the UTF-8 code page (chcp 65001, or the "Use Unicode
+    # UTF-8" option) that encoding emits a BOM. The BOM arrives in front of the
+    # first statement and mgconsole rejects every query with "wrong token at
+    # position 0" -- which silently turns the readiness loop into a long wait that
+    # ends in a timeout. So write the bytes ourselves and let cmd wire up stdin.
+    param(
+        [Parameter(Mandatory = $true)][string]$Cypher,
+        [switch]$Quiet
+    )
+    $tmp = [System.IO.Path]::GetTempFileName()
+    try {
+        [System.IO.File]::WriteAllText($tmp,
+            (($Cypher -replace "`r`n", "`n").TrimEnd() + "`n"),
+            (New-Object System.Text.UTF8Encoding $false))
+        $line = "docker exec -i $Db mgconsole --host 127.0.0.1 --port $BoltPort < `"$tmp`""
+        if ($Quiet) { cmd /c $line *> $null } else { cmd /c $line }
+    } finally {
+        Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
+    }
+}
+
 function Invoke-Cypher {
-    # Run one or more Cypher statements against Memgraph and show the result,
-    # reusing the mgconsole already bundled in the memgraph-mage image.
+    # Run one or more Cypher statements against Memgraph and show the result.
     param([Parameter(Mandatory = $true)][string]$Cypher)
-    $Cypher | docker exec -i $Db mgconsole --host 127.0.0.1 --port $BoltPort
+    Invoke-MgConsole -Cypher $Cypher
     if ((Get-ExitCode) -ne 0) { throw "mgconsole exited with code $(Get-ExitCode)." }
 }
 
 function Test-Cypher {
     # Same, but silent: used to poll until Memgraph accepts Bolt connections.
     param([string]$Cypher = 'RETURN 1;')
-    $Cypher | docker exec -i $Db mgconsole --host 127.0.0.1 --port $BoltPort *> $null
+    Invoke-MgConsole -Cypher $Cypher -Quiet
     return ((Get-ExitCode) -eq 0)
 }
 
@@ -193,19 +219,15 @@ if (-not $PyBin) {
     )
 }
 
-# Pipe plain UTF-8 into the containers, and render this script's own output
-# correctly on older consoles. The no-BOM encodings matter: on a UTF-8 console
-# (chcp 65001) the defaults carry a byte-order mark, and PowerShell 5.1 writes it
-# straight into mgconsole's stdin, which then rejects every query with "wrong
-# token at position 0". Saved and restored so the demo leaves no trace in the
-# calling session.
+# Render this script's own output correctly on older consoles. Saved and restored
+# so the demo leaves no trace in the calling session. (Cypher reaches mgconsole
+# as bytes we write ourselves -- see Invoke-MgConsole -- so no console encoding
+# can put a BOM in front of a query.)
 $PriorOutputEncoding = $global:OutputEncoding
 $PriorConsoleOutputEncoding = [Console]::OutputEncoding
-$PriorConsoleInputEncoding = [Console]::InputEncoding
 $Utf8NoBom = New-Object System.Text.UTF8Encoding $false
 $global:OutputEncoding = $Utf8NoBom
 try { [Console]::OutputEncoding = $Utf8NoBom } catch { }
-try { [Console]::InputEncoding = $Utf8NoBom } catch { }
 
 try {
     # ---- 1. Spin up Memgraph (the memory store) ------------------------------
@@ -274,7 +296,6 @@ try {
 } finally {
     $global:OutputEncoding = $PriorOutputEncoding
     try { [Console]::OutputEncoding = $PriorConsoleOutputEncoding } catch { }
-    try { [Console]::InputEncoding = $PriorConsoleInputEncoding } catch { }
 }
 
 # ---- Wrap up ----------------------------------------------------------------
