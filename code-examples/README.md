@@ -34,8 +34,14 @@ work directory afterwards.
 ```
 
 Needs what the examples need — Docker, git, and Python 3.10-3.13 — plus `curl`,
-to check that the MCP endpoint really answers. `--keep` takes a single example,
-for the port reason above. Per-example logs land in `test-logs-unix/`.
+to check that the MCP endpoint really answers. Nothing else: GNU `timeout` (or
+Homebrew's `gtimeout`) is used when present, otherwise a built-in watchdog
+enforces the same per-example ceiling. Before running anything it checks that
+the host ports the selected examples publish (7687, 7688, 7444, 8000) are free
+and, if not, names the container or process holding them — a dev Memgraph of
+your own on 7687 would otherwise fail every example with the same "port is
+already allocated" error. `--keep` takes a single example, for the port reason
+above. Per-example logs land in `test-logs-unix/`.
 
 ### Windows — `test.ps1`
 

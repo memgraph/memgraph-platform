@@ -19,7 +19,14 @@
 # Python 3.10-3.13 -- plus curl, used here to check that the MCP endpoint really
 # answers. No API keys: OPENAI_API_KEY is deliberately unset, so agentic-graphrag
 # stops after its three atomic pipelines instead of launching the interactive
-# Streamlit app.
+# Streamlit app. GNU 'timeout' (or Homebrew's 'gtimeout') is used when present;
+# otherwise a built-in watchdog enforces the same per-example ceiling, so plain
+# macOS needs nothing extra.
+#
+# Before anything runs, the host ports the selected examples publish (7687,
+# 7688, 7444, 8000) must be free. A container of your own on 7687 -- say a dev
+# Memgraph -- would otherwise make every example fail with the same
+# "port is already allocated" error, so the harness names the holder and stops.
 #
 # Usage:
 #   ./test.sh                       # run all three examples
@@ -260,11 +267,112 @@ check_clean_ai_memory() {
 
 # ---- Runner -----------------------------------------------------------------
 # Portable timeout: GNU coreutils on Linux, gtimeout from Homebrew coreutils on
-# macOS, otherwise run unbounded and say so.
+# macOS. Without either, run_with_timeout falls back to a bash watchdog below,
+# so the ceiling is enforced everywhere; only the mechanism differs.
 TIMEOUT_BIN=""
 for cand in timeout gtimeout; do
   command -v "$cand" >/dev/null 2>&1 && { TIMEOUT_BIN="$cand"; break; }
 done
+
+# run_with_timeout <seconds> <command...>  -- exit 124 on timeout, like GNU timeout.
+run_with_timeout() {
+  limit="$1"; shift
+  if [ -n "$TIMEOUT_BIN" ]; then
+    "$TIMEOUT_BIN" "$limit" "$@" </dev/null
+    return $?
+  fi
+  # Fallback: run the command in the background and race it against a sleeping
+  # watchdog. The watchdog leaves a marker before it kills, so a command that
+  # dies of the watchdog's TERM is reported as a timeout, not as its own exit.
+  marker="$WORK/.timeout-$$"
+  rm -f "$marker"
+  "$@" </dev/null &
+  cmd_pid=$!
+  # The watchdog sleeps in a background child of its own and traps TERM, so that
+  # when the command finishes first we can stop it silently: a subshell whose
+  # FOREGROUND child is killed reports "Terminated: 15" on stderr, this does not.
+  (
+    sleeper=""
+    trap 'kill "${sleeper:-}" 2>/dev/null; exit 0' TERM
+    sleep "$limit" & sleeper=$!
+    wait "$sleeper" || exit 0
+    touch "$marker"; kill -TERM "$cmd_pid" 2>/dev/null
+    sleep 5 & sleeper=$!
+    wait "$sleeper"; kill -KILL "$cmd_pid" 2>/dev/null
+  ) &
+  watchdog=$!
+  wait "$cmd_pid"
+  cmd_status=$?
+  kill "$watchdog" 2>/dev/null || true
+  wait "$watchdog" 2>/dev/null || true
+  if [ -e "$marker" ]; then
+    rm -f "$marker"
+    return 124
+  fi
+  return "$cmd_status"
+}
+
+# The host ports each example publishes. A foreign holder of any of them makes
+# the example fail at 'docker run' with "port is already allocated".
+ports_for() {
+  case "$1" in
+    agentic-ai)       echo "7688" ;;
+    agentic-graphrag) echo "7687 7444 8000" ;;
+    ai-memory)        echo "7687 7444" ;;
+  esac
+}
+
+# Containers the examples create themselves. Leftovers among these are fine:
+# each run starts with that example's own 'clean'.
+EXAMPLE_CONTAINERS="zero-demo-memgraph zero-demo-postgres zero-demo-memgql agenticgraphrag-memgraph agenticgraphrag-mcp aimemory-memgraph"
+
+# port_holder <port>  -- prints who holds the port (empty if free or ours):
+#   'container <name>' for a published port on a container that is not ours,
+#   'process <command> (pid N)' for a native listener, found via lsof or ss.
+port_holder() {
+  port="$1"
+  ours=0
+  # One line per running container: '<name> <published ports>'.
+  while read -r name ports; do
+    case "$ports" in
+      *":${port}->"*) ;;
+      *) continue ;;
+    esac
+    case " $EXAMPLE_CONTAINERS " in
+      *" $name "*) ours=1 ;;
+      *) echo "container $name"; return ;;
+    esac
+  done <<EOF
+$(docker ps --format '{{.Names}} {{.Ports}}')
+EOF
+  [ "$ours" -eq 1 ] && return
+  if command -v lsof >/dev/null 2>&1; then
+    lsof -nP -iTCP:"$port" -sTCP:LISTEN 2>/dev/null | awk 'NR == 2 { print "process " $1 " (pid " $2 ")"; exit }'
+  elif command -v ss >/dev/null 2>&1; then
+    ss -ltnpH "sport = :$port" 2>/dev/null | awk 'NR == 1 { print "process " $NF; exit }'
+  fi
+}
+
+check_ports_free() {
+  blocked=0
+  checked=" "
+  for name in $SELECTED; do
+    for port in $(ports_for "$name"); do
+      case "$checked" in *" $port "*) continue ;; esac
+      checked="$checked$port "
+      holder="$(port_holder "$port")"
+      [ -n "$holder" ] || continue
+      blocked=1
+      printf '%sHost port %s is in use by %s%s -- %s publishes it.\n' \
+        "$C_BAD" "$port" "$holder" "$C_OFF" "$name" >&2
+    done
+  done
+  if [ "$blocked" -eq 1 ]; then
+    echo "The examples bind fixed host ports (7687, 7688, 7444, 8000). Stop whatever" >&2
+    echo "holds them (e.g. 'docker stop <container>') and re-run." >&2
+    exit 1
+  fi
+}
 
 clean_example() {
   # Best effort: a failed run may have left the example's own clean path broken.
@@ -300,20 +408,14 @@ run_example() {
   clean_example "$name"
 
   limit="$(timeout_for "$name")"
-  if [ -n "$TIMEOUT_BIN" ]; then
-    note "running: $name.sh  (timeout ${limit}s, log: $LOG)"
-    # OPENAI_API_KEY is unset on purpose -- see the header.
-    env -u OPENAI_API_KEY "$TIMEOUT_BIN" "$limit" "$script" >"$LOG" 2>&1
-    status=$?
-  else
-    note "running: $name.sh  (no timeout command available, log: $LOG)"
-    env -u OPENAI_API_KEY "$script" >"$LOG" 2>&1
-    status=$?
-  fi
+  note "running: $name.sh  (timeout ${limit}s, log: $LOG)"
+  # OPENAI_API_KEY was unset on purpose before this loop -- see the header.
+  run_with_timeout "$limit" "$script" >"$LOG" 2>&1
+  status=$?
 
   if [ "$status" -eq 0 ]; then
     pass "$name.sh exited 0"
-  elif [ "$status" -eq 124 ] && [ -n "$TIMEOUT_BIN" ]; then
+  elif [ "$status" -eq 124 ]; then
     fail "$name.sh timed out after ${limit}s"
   else
     fail "$name.sh exited $status"
@@ -398,12 +500,17 @@ docker info >/dev/null 2>&1 || {
   echo "Docker is installed but its engine is not responding; start it first." >&2
   exit 1
 }
+check_ports_free
+
+# Hide the key from every example so agentic-graphrag stops after its atomic
+# pipelines instead of blocking on the interactive Streamlit app.
+unset OPENAI_API_KEY
 
 mkdir -p "$WORK"
 
 log "Testing: $SELECTED"
 note "logs: $WORK"
-[ -n "$TIMEOUT_BIN" ] || note "no timeout/gtimeout found -- examples run unbounded"
+[ -n "$TIMEOUT_BIN" ] || note "no timeout/gtimeout found -- using the built-in watchdog"
 
 for name in $SELECTED; do
   run_example "$name"

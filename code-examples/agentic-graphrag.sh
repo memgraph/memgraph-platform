@@ -101,8 +101,11 @@ until echo "RETURN 1;" | mg >/dev/null 2>&1; do sleep 1; done
 # mgconsole accepts a bounded amount of input per invocation, so the .cypherl is
 # streamed in batches (same approach as the demo's setup.sh, but over a Docker
 # network so it works the same on Linux, macOS, and Windows).
-log "Importing the AskNews finance knowledge graph ($(wc -l < "$DATASET") statements)"
-lines=$(wc -l < "$DATASET"); batch=300; start=1
+# BSD wc (macOS) left-pads its count with spaces; strip them so the banner and
+# the arithmetic below see a bare number on every platform.
+lines=$(wc -l < "$DATASET" | tr -d " ")
+log "Importing the AskNews finance knowledge graph ($lines statements)"
+batch=300; start=1
 while [ "$start" -le "$lines" ]; do
   sed -n "${start},$((start + batch - 1))p" "$DATASET" | mg >/dev/null 2>&1
   start=$((start + batch))
