@@ -33,10 +33,17 @@ graph traversal, not three separate lookups glued together.
 
 ## What You Need
 
-- **Docker**: https://docs.docker.com/get-docker/
-- **Python 3.10-3.13**: https://www.python.org/downloads/ (installs the three
-  Context Graph packages above from PyPI into a throwaway virtualenv — no
-  repository checkout needed)
+Two things to install once, yourself. The script checks for both before it
+touches anything and prints exactly how to get whichever is missing:
+
+- **Docker**: https://docs.docker.com/get-docker/ — on Windows,
+  `winget install --id Docker.DockerDesktop`; Docker Desktop must be running.
+- **Python 3.10-3.13**: https://www.python.org/downloads/ — on Windows,
+  `winget install --id Python.Python.3.12` (tick *Add python.exe to PATH*).
+
+Everything below that the script installs on its own: the Memgraph image, and
+the three Context Graph packages from PyPI into a throwaway virtualenv
+(`.ai-memory-venv/`) next to the script — no repository checkout needed.
 
 No API keys: this example writes structured memory directly, the same way an
 application would call these packages. Automatic, LLM-backed extraction from
@@ -83,6 +90,10 @@ docker run -d --name aimemory-memgraph --network aimemory-net \
 python3 -m venv .ai-memory-venv
 .ai-memory-venv/bin/pip install sessions-graph actions-graph skills-graph memgraph-toolbox
 ```
+
+On Windows the interpreter lives in `.ai-memory-venv\Scripts\` instead of
+`.ai-memory-venv/bin/`, so read `.ai-memory-venv\Scripts\python.exe -m pip …`
+for this and the next step.
 
 ### 3. Write the three memory types
 
@@ -197,9 +208,10 @@ that memory back before it starts.
 
 ```bash
 ./ai-memory.sh clean          # .\ai-memory.ps1 clean  on Windows
-# and, if you started Lab:
-docker rm -f aimemory-lab
 ```
+
+That removes the container, the Lab container if you started one, the network,
+and the virtualenv.
 
 If you ran the installer above, mind the order: the plugin keeps writing to
 whatever answers on `bolt://localhost:7687` — which is this demo's container.

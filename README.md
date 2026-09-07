@@ -10,116 +10,52 @@
 
 ## :runner: Quick start
 
-With Docker running on your system and ports 7687, 7444 and 3000 available, run one of the following commands to download Memgraph Platform Docker Compose file and start Memgraph and Memgraph Lab services:
+With Docker running on your system and ports 7687, 7444 and 3000 available, run one of the following commands to download the Memgraph Docker Compose file and start the Memgraph and Memgraph Lab services:
 
 **Linux/macOS**
 
 ```
-curl https://install.memgraph.com | sh
+curl -sSL https://install.memgraph.com | bash
 ```
 
 **Windows**
 
 ```
-iwr https://windows.memgraph.com | iex
+iwr https://install.memgraph.com/windows -useb | iex
 ```
 
-By running `docker ps`, you'll notice `memgraph-mage` and `memgraph-lab` containers running. If you head over to `localhost:3000`, Quick Connect in Memgraph Lab will detect Memgraph running on your system. Check out the basic [Docker Compose file](./docker-compose.yml) and update it to fit your needs.
+By running `docker ps`, you'll notice `memgraph-mage` and `memgraph-lab` containers running. If you head over to `localhost:3000`, Quick Connect in Memgraph Lab will detect Memgraph running on your system. Check out the basic [Docker Compose file](https://github.com/memgraph/memgraph-platform/blob/main/docker-compose.yml) and update it to fit your needs.
 
 To start `mgconsole`, run the following command:
 
 ```
-# with `docker ps` get the Memgraph container id 
+# with `docker ps` get the Memgraph container id
 docker exec -ti <container-id> mgconsole
 ```
 
+## :bulb: Code examples
+
+Each example is a runnable version of one of the [Memgraph use cases](https://memgraph.com/use-cases): [GraphRAG](https://memgraph.com/graphrag), [AI Memory](https://memgraph.com/ai-memory) and [Agentic AI](https://memgraph.com/agentic-ai). Each is a self-contained, end-to-end demo: it starts Memgraph in Docker, loads data, and runs real queries. Docker is the only requirement (AI Memory also needs Python 3.10-3.13). The walkthroughs live in [`code-examples/`](https://github.com/memgraph/memgraph-platform/blob/main/code-examples/README.md).
+
+| Example | Linux/macOS | Windows |
+| --- | --- | --- |
+| [Agentic GraphRAG](https://github.com/memgraph/memgraph-platform/blob/main/code-examples/agentic-graphrag.md) | `curl -sSL https://install.memgraph.com/agentic-graphrag \| bash` | `iwr https://install.memgraph.com/agentic-graphrag/windows -useb \| iex` |
+| [AI Memory](https://github.com/memgraph/memgraph-platform/blob/main/code-examples/ai-memory.md) | `curl -sSL https://install.memgraph.com/ai-memory \| bash` | `iwr https://install.memgraph.com/ai-memory/windows -useb \| iex` |
+| [Agentic AI](https://github.com/memgraph/memgraph-platform/blob/main/code-examples/agentic-ai.md) | `curl -sSL https://install.memgraph.com/agentic-ai \| bash` | `iwr https://install.memgraph.com/agentic-ai/windows -useb \| iex` |
+
+The one-liners run the script straight from the web. To tear an example down, run the downloaded script with `clean` (e.g. `./agentic-ai.sh clean` or `.\agentic-ai.ps1 clean`), or run the docker commands the example prints at the end.
+
 ## :clipboard: Description
 
-This repository serves as a Docker package builder for the Memgraph ecosystem, consisting of:
-- [MemgraphDB](https://github.com/memgraph/memgraph)
+This repository holds the scripts served by [install.memgraph.com](https://install.memgraph.com): the quick start installers ([`init.sh`](https://github.com/memgraph/memgraph-platform/blob/main/init.sh), [`init.ps1`](https://github.com/memgraph/memgraph-platform/blob/main/init.ps1)) with their [Docker Compose file](https://github.com/memgraph/memgraph-platform/blob/main/docker-compose.yml), and the runnable [code examples](https://github.com/memgraph/memgraph-platform/tree/main/code-examples). Together they start the Memgraph ecosystem:
+- [MemgraphDB](https://github.com/memgraph/memgraph), including the MAGE graph algorithms
 - [mgconsole](https://github.com/memgraph/mgconsole)
-- [MAGE](https://github.com/memgraph/mage)
 - [Memgraph Lab](https://memgraph.com/docs/data-visualization)
 
-Here are the Docker images which can be built from this repository:
+The Docker images they use:
 - [Memgraph Docker image](https://hub.docker.com/r/memgraph/memgraph)
 - [Memgraph MAGE Docker image](https://hub.docker.com/r/memgraph/memgraph-mage)
 - [Memgraph Lab Docker image](https://hub.docker.com/r/memgraph/lab)
-- ([*deprecated*](#exclamation-deprecated-memgraph-platform-docker-image)) [Memgraph Platform Docker image](https://hub.docker.com/r/memgraph/memgraph-platform) 
-
-
-## :exclamation: (Deprecated) Memgraph Platform Docker image
-
-The last Memgraph Platform image published on Docker Hub is 2.14.1. In the future, from Memgraph 2.15, **Memgraph Platform image will no longer be published**, and [Docker Compose](./docker-compose.yml) containing Memgraph MAGE and Lab services will replace it.
-
-
-You can start Memgraph Platform with:
-
-```
-docker run -p 3000:3000 -p 7444:7444 -p 7687:7687 --name memgraph memgraph/memgraph-platform
-```
-
-### How to start mgconsole
-
-Start `mgconsole` with:
-
-```
-# get the running-container-id with `docker ps`
-docker exec -ti <running-container-id> mgconsole
-
-# or
-docker run -ti --entrypoint=mgconsole memgraph/memgraph-platform
-```
-
-When connecting to local Memgraph with `mgconsole` on Windows and Mac, make
-sure to provide the following argument `--host host.docker.internal`:
-
-```
-docker run -ti --entrypoint=mgconsole memgraph/memgraph-platform --host host.docker.internal
-```
-
-### How to start only Lab
-
-Run only the Lab with the following command:
-
-```
-docker run -p 3000:3000 memgraph/memgraph-platform -c /etc/supervisor/supervisord-lab-only.conf
-```
-
-### How to start only Memgraph
-
-Run only Memgraph with the following command:
-
-```
-docker run -p 7687:7687 memgraph/memgraph-platform -c /etc/supervisor/supervisord-memgraph-only.conf
-```
-
-
-### :hourglass: Versioning
-
-The versioning is transparent in the sense that we explicitly state which
-version of software is included, and it looks like this:
-
-`memgraph/memgraph-platform:2.5.0-memgraph2.4-lab2.2.2-mage1.3.5`
-
-and just by looking at each of the Memgraph Platform version, you can know which
-versions of software it contains without looking at details in release notes.
-
-### :whale: Docker build
-
-To build docker image, you need to provide two build arguments:
-
-* `TARGETARCH` - a suffix of the specific local Memgraph debian version; for example if
-  you have a local debian package `memgraph-2.10-arm64.deb` that you want to build platform for, use
-  the following build argument: `--build-arg="TARGETARCH=2.10-arm64"`.
-
-* `NPM_PACKAGE_TOKEN` - npm token to install private libraries that Memgraph Lab uses, set
-  it up with the following argument: `--build-arg="NPM_PACKAGE_TOKEN=ghp_6..."`
-
-1. Run `docker build --build-arg="TARGETARCH=..." --build-arg="NPM_PACKAGE_TOKEN=..." . -t memgraph-platform`
-2. Run `docker run -p 3000:3000 -p 7687:7687 memgraph-platform`
-3. Go to `http://localhost:3000` and connect to Memgraph database with Memgraph
-  Lab in order to test it out
 
 <p align="center">
   <a href="#">
