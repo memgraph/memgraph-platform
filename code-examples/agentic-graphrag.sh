@@ -118,7 +118,29 @@ docker run -d --name "$MCP" --network "$NET" \
   -p "${MCP_PORT}:8000" \
   --env MEMGRAPH_URL="bolt://${DB}:7687" \
   "$MCP_IMAGE" >/dev/null
-echo "MCP endpoint: http://localhost:${MCP_PORT}/mcp/"
+
+# 'docker run -d' returns as soon as the container exists, several seconds before
+# the HTTP server inside it is listening. The endpoint below is meant to be
+# pasted straight into a harness, so wait for the server to say it is up rather
+# than advertising a port that still refuses connections.
+mcp_ready=0
+for _ in $(seq 1 30); do
+  [ "$(docker inspect -f '{{.State.Running}}' "$MCP" 2>/dev/null)" = "true" ] || break
+  if docker logs "$MCP" 2>&1 | grep -qE "Application startup complete|Uvicorn running on"; then
+    mcp_ready=1
+    break
+  fi
+  sleep 1
+done
+if [ "$mcp_ready" -eq 1 ]; then
+  echo "MCP endpoint: http://localhost:${MCP_PORT}/mcp/"
+else
+  # Not fatal: the three pipelines below talk to Memgraph directly, so the demo
+  # is still worth watching without the MCP server.
+  echo "Warning: the MCP server did not become ready; its recent logs:" >&2
+  docker logs --tail 20 "$MCP" >&2 || true
+  echo "Continuing - the pipelines below query Memgraph directly." >&2
+fi
 
 # ---- 3. Run the three GraphRAG retrieval pipelines (atomic Cypher) ----------
 # Each pipeline is ONE database operation, matching https://memgraph.com/graphrag.

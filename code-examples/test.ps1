@@ -20,7 +20,8 @@
 #   .\test.ps1 -KeepUp                # leave the last example's containers up
 #   .\test.ps1 -CleanOnly             # just tear every example down
 #
-# Logs land in .test-logs\<example>.log; on failure the tail is printed inline.
+# Logs land in test-logs-windows\<example>.log; on failure the tail is printed
+# inline.
 #
 # If Windows blocks the script, allow local scripts for this session first:
 #   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
@@ -44,7 +45,7 @@ Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Continue'
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$LogDir = Join-Path $ScriptDir '.test-logs'
+$LogDir = Join-Path $ScriptDir 'test-logs-windows'
 
 # Run each example in a child process of the SAME host we are running under, so
 # that its `exit` sets a process exit code we can read instead of killing this

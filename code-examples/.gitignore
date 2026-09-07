@@ -1,4 +1,5 @@
 .agentic-graphrag-work/
 .memgql-work/
 .ai-memory-venv/
-.test-logs/
+test-logs-unix/
+test-logs-windows/

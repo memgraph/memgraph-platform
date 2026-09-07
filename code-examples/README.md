@@ -11,10 +11,36 @@ macOS/Linux and `.ps1` for Windows PowerShell.
 
 ## Testing
 
-`test.ps1` smoke-tests every example on Windows. Each demo binds fixed ports
-(`ai-memory` and `agentic-graphrag` both publish Bolt on 7687), so they are run
-one at a time and torn down before and after. An example passes only when it
-exits 0 **and** prints its success banner:
+One harness per platform, each covering all three examples. Both run the
+examples **one at a time** and tear them down before and after: every demo
+binds fixed host ports (`ai-memory` and `agentic-graphrag` both publish Bolt on
+7687, `agentic-ai` publishes 7688), so parallel runs would collide. Both also
+hide `OPENAI_API_KEY` from the examples, so `agentic-graphrag` stops after its
+three atomic pipelines instead of blocking on the optional Streamlit app.
+
+### macOS / Linux — `test.sh`
+
+Asserts on what each example actually printed — the ranked plan, the retrieved
+neighbourhood, the recalled memory — because an exit code of 0 alone would not
+catch a pipeline that returned no rows. It also checks that the endpoints an
+example advertises really answer, and that `clean` removes every container and
+work directory afterwards.
+
+```bash
+./test.sh                       # all three, one at a time
+./test.sh ai-memory             # just one (or several, space separated)
+./test.sh --keep agentic-ai     # leave the containers up for inspection
+./test.sh clean                 # tear down every example, run nothing
+```
+
+Needs what the examples need — Docker, git, and Python 3.10-3.13 — plus `curl`,
+to check that the MCP endpoint really answers. `--keep` takes a single example,
+for the port reason above. Per-example logs land in `test-logs-unix/`.
+
+### Windows — `test.ps1`
+
+Smoke-tests every example: one passes when it exits 0 **and** prints its
+success banner.
 
 ```powershell
 .\test.ps1                     # all examples
@@ -23,7 +49,7 @@ exits 0 **and** prints its success banner:
 .\test.ps1 -CleanOnly          # tear every example down
 ```
 
-Logs land in `.test-logs\`. Prerequisites an example needs but the machine
-lacks (Docker not running, no `git`, no Python 3.10–3.13) are reported as
-`SKIP` rather than `FAIL`. `OPENAI_API_KEY` is hidden from the child processes
-so `agentic-graphrag`'s optional Streamlit app does not block the run.
+Prerequisites an example needs but the machine lacks (Docker not running, no
+`git`, no Python 3.10–3.13) are reported as `SKIP` rather than `FAIL`.
+Per-example logs land in `test-logs-windows\`; on failure the tail is printed
+inline.

@@ -357,7 +357,33 @@ function Invoke-AgenticGraphRagDemo {
         $script:DemoExitCode = 1
         return
     }
-    Write-Host "MCP endpoint: http://localhost:${McpPort}/mcp/"
+    # 'docker run -d' returns as soon as the container exists, several seconds
+    # before the HTTP server inside it is listening. The endpoint below is meant
+    # to be pasted straight into a harness, so wait for the server to say it is
+    # up rather than advertising a port that still refuses connections.
+    $mcpReady = $false
+    for ($i = 0; $i -lt 30; $i++) {
+        $running = (& docker inspect -f '{{.State.Running}}' $Mcp 2>&1)
+        if ($LASTEXITCODE -ne 0 -or "$running".Trim() -ne 'true') { break }
+        $logs = (& docker logs $Mcp 2>&1) -join "`n"
+        if ($logs -match 'Application startup complete|Uvicorn running on') {
+            $mcpReady = $true
+            break
+        }
+        Start-Sleep -Seconds 1
+    }
+    $global:LASTEXITCODE = 0
+    if ($mcpReady) {
+        Write-Host "MCP endpoint: http://localhost:${McpPort}/mcp/"
+    }
+    else {
+        # Not fatal: the three pipelines below talk to Memgraph directly, so the
+        # demo is still worth watching without the MCP server.
+        Write-Host 'Warning: the MCP server did not become ready; its recent logs:' -ForegroundColor Yellow
+        & docker logs --tail 20 $Mcp 2>&1 | ForEach-Object { Write-Host "  $_" }
+        $global:LASTEXITCODE = 0
+        Write-Host 'Continuing - the pipelines below query Memgraph directly.' -ForegroundColor Yellow
+    }
 
     # ---- 3. Run the three GraphRAG retrieval pipelines (atomic Cypher) -------
     # Each pipeline is ONE database operation, matching https://memgraph.com/graphrag.
