@@ -37,6 +37,11 @@
 #   ./agentic-graphrag.sh          # import + run the three atomic pipelines
 #                                   # (+ launch the agent app if OPENAI_API_KEY is set)
 #   ./agentic-graphrag.sh clean    # stop containers and remove the work dir
+#
+# If you have the script locally, use the `clean` command above. Piped straight
+# from the web (curl -sSL https://install.memgraph.com/agentic-graphrag | bash) there is no
+# file to pass `clean` to, so the script prints the equivalent cleanup commands
+# in the terminal instead.
 
 set -euo pipefail
 
@@ -54,6 +59,19 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 WORK="$SCRIPT_DIR/.agentic-graphrag-work"
 REPO="$WORK/ai-demos"
 APP_DIR="$REPO/agentic-graph-rag/agentic"
+
+# Tailor the copy-pasteable hints to how this was actually started. If you have the
+# script locally, we print the `clean` command; if not (piped into bash), there is
+# no file on disk to re-run or to pass `clean` to, so we print the equivalent
+# cleanup commands as they would be written in the terminal.
+if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]:-}" ]]; then
+  SELF="./$(basename "${BASH_SOURCE[0]}")"
+  RUN_HINT="$SELF"
+  CLEAN_HINT="$SELF clean"
+else
+  RUN_HINT="curl -sSL https://install.memgraph.com/agentic-graphrag | bash"
+  CLEAN_HINT="docker rm -f $MCP $DB; docker network rm $NET; rm -rf '$WORK'"
+fi
 
 log() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
 mg()  { docker run -i --rm --network "$NET" "$MGCONSOLE_IMAGE" --host "$DB" --port 7687; }
@@ -191,10 +209,10 @@ if [[ -z "${OPENAI_API_KEY:-}" ]]; then
 To also run the agentic app (an LLM agent that classifies each question and picks
 one of the three pipelines above), set an OpenAI key and re-run:
   export OPENAI_API_KEY=sk-...
-  ./agentic-graphrag.sh
+  $RUN_HINT
 
 Tear everything down when you are done:
-  ./agentic-graphrag.sh clean
+  $CLEAN_HINT
 EOF
   exit 0
 fi
@@ -244,5 +262,5 @@ App stopped. Memgraph and the MCP server are still running so you can re-launch:
   source "$WORK/venv/bin/activate" && cd "$APP_DIR" && streamlit run agenticGraphRAG.py
 
 Tear everything down when you are done:
-  ./agentic-graphrag.sh clean
+  $CLEAN_HINT
 EOF

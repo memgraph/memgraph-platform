@@ -33,6 +33,11 @@
 # Usage:
 #   ./agentic-ai.sh          # bring up the shared layer + reasoning graph, plan
 #   ./agentic-ai.sh clean    # stop and remove everything this script created
+#
+# If you have the script locally, use the `clean` command above. Piped straight
+# from the web (curl -sSL https://install.memgraph.com/agentic-ai | bash) there is no
+# file to pass `clean` to, so the script prints the equivalent cleanup commands
+# in the terminal instead.
 
 set -euo pipefail
 
@@ -49,6 +54,19 @@ POSTGRES="zero-demo-postgres"
 MEMGQL="zero-demo-memgql"
 
 WORK="$(cd "$(dirname "$0")" && pwd)/.memgql-work"
+
+# Tailor the copy-pasteable hints to how this was actually started. If you have the
+# script locally, we print the `clean` command; if not (piped into bash), there is
+# no file on disk to re-run or to pass `clean` to, so we print the equivalent
+# cleanup commands as they would be written in the terminal.
+if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]:-}" ]]; then
+  SELF="./$(basename "${BASH_SOURCE[0]}")"
+  RUN_HINT="$SELF"
+  CLEAN_HINT="$SELF clean"
+else
+  RUN_HINT="curl -sSL https://install.memgraph.com/agentic-ai | bash"
+  CLEAN_HINT="docker rm -f $MEMGQL $MEMGRAPH $POSTGRES; docker network rm $NET; rm -rf '$WORK'"
+fi
 
 log() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
 
@@ -241,5 +259,5 @@ Notes (MemGQL is early):
   - MemGQL Community allows up to two simultaneous data sources.
 
 Tear everything down:
-  ./agentic-ai.sh clean
+  $CLEAN_HINT
 EOF

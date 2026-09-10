@@ -34,6 +34,11 @@
 # Usage:
 #   ./ai-memory.sh          # bring everything up, seed memory, run recall
 #   ./ai-memory.sh clean    # stop and remove everything this script created
+#
+# If you have the script locally, use the `clean` command above. Piped straight
+# from the web (curl -sSL https://install.memgraph.com/ai-memory | bash) there is no
+# file to pass `clean` to, so the script prints the equivalent cleanup commands
+# in the terminal instead.
 
 set -euo pipefail
 
@@ -57,6 +62,19 @@ else
   SCRIPT_DIR="$PWD"
 fi
 VENV="$SCRIPT_DIR/.ai-memory-venv"
+
+# Tailor the copy-pasteable hints to how this was actually started. If you have the
+# script locally, we print the `clean` command; if not (piped into bash), there is
+# no file on disk to re-run or to pass `clean` to, so we print the equivalent
+# cleanup commands as they would be written in the terminal.
+if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]:-}" ]]; then
+  SELF="./$(basename "${BASH_SOURCE[0]}")"
+  RUN_HINT="$SELF"
+  CLEAN_HINT="$SELF clean"
+else
+  RUN_HINT="curl -sSL https://install.memgraph.com/ai-memory | bash"
+  CLEAN_HINT="docker rm -f $DB $LAB; docker network rm $NET; rm -rf '$VENV'"
+fi
 
 # ---- Helpers ----------------------------------------------------------------
 log() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
@@ -98,12 +116,12 @@ fatal() {
 command -v docker >/dev/null 2>&1 || fatal \
   "Missing dependency: Docker (the memory store runs in a container)." \
   "Install it: https://docs.docker.com/get-docker/" \
-  "Then re-run: ./ai-memory.sh"
+  "Then re-run: $RUN_HINT"
 
 docker info >/dev/null 2>&1 || fatal \
   "Docker is installed, but its engine is not responding." \
   "Start Docker (Docker Desktop, colima, or your daemon of choice)," \
-  "then re-run: ./ai-memory.sh"
+  "then re-run: $RUN_HINT"
 
 PYBIN=""
 for cand in python3.13 python3.12 python3.11 python3.10; do
@@ -119,7 +137,7 @@ if [[ -z "$PYBIN" ]]; then
     "Install it: https://www.python.org/downloads/" \
     "macOS:      brew install python@3.12" \
     "Debian etc: sudo apt install python3.12 python3.12-venv" \
-    "Then re-run: ./ai-memory.sh"
+    "Then re-run: $RUN_HINT"
 fi
 
 # ---- 1. Spin up Memgraph (the memory store) ---------------------------------
@@ -209,7 +227,7 @@ Every real session then writes Memory/Action/Skill nodes automatically, the
 same nodes ai-memory.py just wrote by hand.
 
 Tear everything down when you are done:
-  ./ai-memory.sh clean
+  $CLEAN_HINT
 
 If you ran the installer above, mind the order: the plugin keeps writing to
 whatever answers on bolt://localhost:${BOLT_PORT}, which is this container. Removing it
