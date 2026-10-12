@@ -59,6 +59,13 @@ macOS / Linux:
 ./ai-memory.sh clean    # stop and remove everything the script created
 ```
 
+The shell installer tries host Bolt port `7687`. If another container or process
+already owns it, Docker assigns a free port and the script prints the resulting
+URL. Existing services keep running. To choose a port explicitly, run
+`MEMGRAPH_PORT=7688 ./ai-memory.sh`; an occupied explicit port fails with an
+instruction to choose another. The printed Context Graph install commands pass
+the selected port through so the plugin writes to this demo's database.
+
 Windows (PowerShell 5.1 or 7+), same steps, same output:
 
 ```powershell
@@ -80,7 +87,7 @@ Context Graph packages have written into it:
 docker network create aimemory-net
 
 docker run -d --name aimemory-memgraph --network aimemory-net \
-  -p 7687:7687 -p 7444:7444 \
+  -p 7687:7687 \
   memgraph/memgraph-mage:3.12.0 --schema-info-enabled=True
 ```
 

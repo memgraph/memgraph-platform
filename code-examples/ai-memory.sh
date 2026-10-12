@@ -34,6 +34,8 @@
 # Usage:
 #   ./ai-memory.sh          # bring everything up, seed memory, run recall
 #   ./ai-memory.sh clean    # stop and remove everything this script created
+#   MEMGRAPH_PORT=7688 ./ai-memory.sh  # use an explicit host Bolt port
+# A busy default port falls back to a Docker-assigned port.
 #
 # If you have the script locally, use the `clean` command above. Piped straight
 # from the web (curl -sSL https://install.memgraph.com/ai-memory | bash) there is no
@@ -49,7 +51,8 @@ LAB_IMAGE="memgraph/lab:3.12.0"
 NET="aimemory-net"
 DB="aimemory-memgraph"
 LAB="aimemory-lab"
-BOLT_PORT="7687"
+PORT_EXPLICIT="${MEMGRAPH_PORT:+1}"
+BOLT_PORT="${MEMGRAPH_PORT:-7687}"
 
 # Run from a checkout, ai-memory.py sits next to this script. Piped into bash
 # (curl -sSL https://install.memgraph.com/ai-memory | bash) there is no script
@@ -145,9 +148,26 @@ log "Creating network + starting Memgraph ($MAGE_IMAGE)"
 docker rm -f "$DB" >/dev/null 2>&1 || true
 docker network create "$NET" >/dev/null 2>&1 || true
 
-docker run -d --name "$DB" --network "$NET" \
-  -p "${BOLT_PORT}:7687" -p 7444:7444 \
-  "$MAGE_IMAGE" --schema-info-enabled=True >/dev/null
+if output=$(docker run -d --name "$DB" --network "$NET" \
+  -p "${BOLT_PORT}:7687" "$MAGE_IMAGE" --schema-info-enabled=True 2>&1); then
+  :
+elif [[ "$output" == *"port is already allocated"* || "$output" == *"address already in use"* ]]; then
+  # Docker retains the failed container after a binding conflict. Remove only
+  # this attempt; never stop the process that already owns the requested port.
+  docker rm "$DB" >/dev/null
+  if [[ -n "$PORT_EXPLICIT" ]]; then
+    echo "Port $BOLT_PORT is already allocated; rerun with MEMGRAPH_PORT set to a free port." >&2
+    exit 1
+  fi
+  echo "Port $BOLT_PORT is already allocated -- asking Docker for a free Bolt port."
+  docker run -d --name "$DB" --network "$NET" -p 7687 \
+    "$MAGE_IMAGE" --schema-info-enabled=True >/dev/null
+  BOLT_PORT=$(docker inspect --format '{{(index (index .NetworkSettings.Ports "7687/tcp") 0).HostPort}}' "$DB")
+else
+  printf '%s\n' "$output" >&2
+  exit 1
+fi
+
 
 log "Waiting for Memgraph to be ready (Bolt-aware check)"
 ready=0
@@ -212,9 +232,9 @@ by hand). One script installs and wires the Context Graph plugin for Claude
 Code or Codex end to end, defaulting to this same Memgraph instance
 (bolt://localhost:${BOLT_PORT}, no auth, database memgraph):
 
-  curl -fsSL https://raw.githubusercontent.com/memgraph/ai-toolkit/main/context-graph/scripts/install.sh | bash
+  curl -fsSL https://raw.githubusercontent.com/memgraph/ai-toolkit/main/context-graph/scripts/install.sh | MEMGRAPH_PORT=${BOLT_PORT} bash
   # Codex instead of Claude Code:
-  CONTEXT_GRAPH_RUNTIME=codex bash -c "\$(curl -fsSL https://raw.githubusercontent.com/memgraph/ai-toolkit/main/context-graph/scripts/install.sh)"
+  MEMGRAPH_PORT=${BOLT_PORT} CONTEXT_GRAPH_RUNTIME=codex bash -c "\$(curl -fsSL https://raw.githubusercontent.com/memgraph/ai-toolkit/main/context-graph/scripts/install.sh)"
 
 It registers the runtime's plugin marketplace, installs the plugin (the step a
 bare 'agent-context-graph bootstrap' can't do -- that's what wires hooks into
