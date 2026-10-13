@@ -62,6 +62,9 @@ $LabImage = 'memgraph/lab:3.12.0'
 
 $Net = 'aimemory-net'
 $Db = 'aimemory-memgraph'
+# Marks the demo's Memgraph as throwaway: Context Graph's installer never points a harness's hooks at a
+# container carrying it, so `clean` can't silently remove where real sessions are written.
+$DisposableLabel = 'com.memgraph.ai-memory.disposable=true'
 $Lab = 'aimemory-lab'
 $BoltPort = '7687'
 $PyWanted = @('3.13', '3.12', '3.11', '3.10')
@@ -241,7 +244,7 @@ try {
     docker network create $Net *> $null
     Reset-ExitCode   # an already existing network is not a failure
 
-    docker run -d --name $Db --network $Net `
+    docker run -d --name $Db --network $Net --label $DisposableLabel `
         -p "${BoltPort}:7687" -p 7444:7444 `
         $MageImage --schema-info-enabled=True *> $null
     if ((Get-ExitCode) -ne 0) {
@@ -340,9 +343,9 @@ Git Bash (no native PowerShell port yet):
   CONTEXT_GRAPH_RUNTIME=codex bash -c "`$(curl -fsSL https://raw.githubusercontent.com/memgraph/ai-toolkit/main/context-graph/scripts/install.sh)"
 
 It registers the runtime's plugin marketplace, installs the plugin (the step a
-bare 'agent-context-graph bootstrap' can't do -- that's what wires hooks into
+bare 'memgraph-context-graph bootstrap' can't do -- that's what wires hooks into
 the runtime), installs the CLI with all three connectors, sets your identity
-(defaults to your git user.name; override with AGENT_CONTEXT_GRAPH_USER_ID),
+(defaults to your git user.name; override with MEMGRAPH_CONTEXT_GRAPH_USER_ID),
 and verifies with doctor. Full env var list and defaults:
   https://github.com/memgraph/ai-toolkit/tree/main/context-graph#getting-started-claude-code-or-codex
 
