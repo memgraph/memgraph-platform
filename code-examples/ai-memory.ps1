@@ -333,31 +333,21 @@ Explore the memory graph visually with Memgraph Lab:
   start http://localhost:3000     # then run:  MATCH p=()-[]-() RETURN p;
 
 Wire this into a REAL harness so it collects sessions automatically (no seeding
-by hand). One script installs and wires the Context Graph plugin for Claude
-Code or Codex end to end, defaulting to this same Memgraph instance
-(bolt://localhost:$BoltPort, no auth, database memgraph) -- run it from WSL or
-Git Bash (no native PowerShell port yet):
+by hand). One command sets up Context Graph for every coding agent on this
+machine (Claude Code, Codex, Copilot CLI, Cursor, OpenCode, Antigravity CLI,
+Grok Build); in a terminal it asks before changing anything (run it from WSL or Git Bash):
 
   curl -fsSL https://raw.githubusercontent.com/memgraph/ai-toolkit/main/context-graph/scripts/install.sh | bash
-  # Codex instead of Claude Code:
-  CONTEXT_GRAPH_RUNTIME=codex bash -c "`$(curl -fsSL https://raw.githubusercontent.com/memgraph/ai-toolkit/main/context-graph/scripts/install.sh)"
 
-It registers the runtime's plugin marketplace, installs the plugin (the step a
-bare 'memgraph-context-graph bootstrap' can't do -- that's what wires hooks into
-the runtime), installs the CLI with all three connectors, sets your identity
-(defaults to your git user.name; override with MEMGRAPH_CONTEXT_GRAPH_USER_ID),
-and verifies with doctor. Full env var list and defaults:
-  https://github.com/memgraph/ai-toolkit/tree/main/context-graph#getting-started-claude-code-or-codex
+It gets a durable Memgraph of its own rather than this demo's, which it
+recognises as disposable, then wires each agent it finds, sets your identity
+(your git user.name unless you change it) and checks the hooks. Undo it with
+'memgraph-context-graph uninstall'. More:
+  https://github.com/memgraph/ai-toolkit/tree/main/context-graph#getting-started
 
 Every real session then writes Memory/Action/Skill nodes automatically, the
 same nodes ai-memory.py just wrote by hand.
 
-Tear everything down when you are done:
-  .\ai-memory.ps1 clean
-
-If you ran the installer above, mind the order: the plugin keeps writing to
-whatever answers on bolt://localhost:$BoltPort, which is this container. Removing it
-leaves the hooks with nowhere to write. Either hold off until you are done with
-the plugin, or re-run install.sh afterwards -- with nothing reachable it starts
-a Memgraph of its own on the same port.
+Tear the demo down whenever you like; the installer's Memgraph is separate:
+  .i-memory.ps1 clean
 "@
