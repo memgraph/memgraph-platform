@@ -185,27 +185,23 @@ docker run -d --name aimemory-lab --network aimemory-net -p 3000:3000 \
 ## Wire It Into a Real Harness
 
 The seeding above did by hand what a real coding-assistant plugin does
-automatically. One script installs and wires the
+automatically. One command sets up
 [Context Graph](https://github.com/memgraph/ai-toolkit/tree/main/context-graph)
-plugin end to end for Claude Code or Codex, defaulting to this same Memgraph
-instance (`bolt://localhost:7687`, no auth, database `memgraph`):
+for every coding agent on your machine (Claude Code, Codex, Copilot CLI,
+Cursor, OpenCode, Antigravity CLI, Grok Build):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/memgraph/ai-toolkit/main/context-graph/scripts/install.sh | bash
-# Codex instead of Claude Code:
-CONTEXT_GRAPH_RUNTIME=codex bash -c "$(curl -fsSL https://raw.githubusercontent.com/memgraph/ai-toolkit/main/context-graph/scripts/install.sh)"
 ```
 
-It registers the runtime's plugin marketplace and installs the plugin — the
-step a bare `memgraph-context-graph bootstrap` can't do, since that's what
-actually wires hooks into the runtime — installs the CLI with all three
-connectors, sets your identity, and verifies with `doctor`. It even starts
-Memgraph itself if nothing's reachable, so on a clean machine it doubles as
-an alternative to steps 1–2 above. Override identity with
-`MEMGRAPH_CONTEXT_GRAPH_USER_ID` (defaults to `git config user.name`); see the
-[Context Graph guide](https://github.com/memgraph/ai-toolkit/blob/main/context-graph/README.md#getting-started-claude-code-or-codex)
-for the rest of the configurable env vars and defaults, reconciliation, and
-cross-component queries.
+In a terminal it shows what it found and what it will do, and changes nothing
+until you confirm. It gets a durable Memgraph of its own rather than this
+demo's (it recognises the demo's container as disposable), wires each agent,
+sets your identity (your `git config user.name` unless you change it) and
+checks the hooks with `doctor`. `memgraph-context-graph uninstall` undoes the
+wiring. See the
+[Context Graph guide](https://github.com/memgraph/ai-toolkit/blob/main/context-graph/README.md#getting-started)
+for its flags, reconciliation and cross-component queries.
 
 Every real session then writes `Memory`/`Action`/`Skill` nodes automatically —
 the same nodes `ai-memory.py` just wrote by hand — and the next session reads
@@ -218,13 +214,8 @@ that memory back before it starts.
 ```
 
 That removes the container, the Lab container if you started one, the network,
-and the virtualenv.
-
-If you ran the installer above, mind the order: the plugin keeps writing to
-whatever answers on `bolt://localhost:7687` — which is this demo's container.
-Removing it leaves the hooks with nowhere to write. Either hold off until you're
-done with the plugin, or re-run `install.sh` afterwards — with nothing reachable
-it starts a Memgraph of its own on the same port.
+and the virtualenv. It's safe even after running the Context Graph installer,
+whose Memgraph is separate.
 
 ## Where to Go Next
 
