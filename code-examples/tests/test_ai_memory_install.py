@@ -127,3 +127,15 @@ class AiMemoryStartupTest(unittest.TestCase):
         ).stdout
         self.assertIn("7687/tcp", bindings)
         self.assertNotIn("7444/tcp", bindings)
+
+    def test_container_is_labelled_disposable(self) -> None:
+        """Context Graph's installer must recognise the demo database and never adopt it."""
+        result = self.run_stage()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        label = docker(
+            "inspect",
+            "--format",
+            '{{index .Config.Labels "com.memgraph.ai-memory.disposable"}}',
+            self.container,
+        ).stdout.strip()
+        self.assertEqual(label, "true")

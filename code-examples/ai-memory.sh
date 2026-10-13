@@ -50,6 +50,9 @@ LAB_IMAGE="memgraph/lab:3.12.0"
 
 NET="aimemory-net"
 DB="aimemory-memgraph"
+# Marks the demo's Memgraph as throwaway: Context Graph's installer never points a harness's hooks at a
+# container carrying it, so `clean` can't silently remove where real sessions are written.
+DISPOSABLE_LABEL="com.memgraph.ai-memory.disposable=true"
 LAB="aimemory-lab"
 PORT_EXPLICIT="${MEMGRAPH_PORT:+1}"
 BOLT_PORT="${MEMGRAPH_PORT:-7687}"
@@ -148,7 +151,7 @@ log "Creating network + starting Memgraph ($MAGE_IMAGE)"
 docker rm -f "$DB" >/dev/null 2>&1 || true
 docker network create "$NET" >/dev/null 2>&1 || true
 
-if output=$(docker run -d --name "$DB" --network "$NET" \
+if output=$(docker run -d --name "$DB" --network "$NET" --label "$DISPOSABLE_LABEL" \
   -p "${BOLT_PORT}:7687" "$MAGE_IMAGE" --schema-info-enabled=True 2>&1); then
   :
 elif [[ "$output" == *"port is already allocated"* || "$output" == *"address already in use"* ]]; then
@@ -160,7 +163,7 @@ elif [[ "$output" == *"port is already allocated"* || "$output" == *"address alr
     exit 1
   fi
   echo "Port $BOLT_PORT is already allocated -- asking Docker for a free Bolt port."
-  docker run -d --name "$DB" --network "$NET" -p 7687 \
+  docker run -d --name "$DB" --network "$NET" --label "$DISPOSABLE_LABEL" -p 7687 \
     "$MAGE_IMAGE" --schema-info-enabled=True >/dev/null
   BOLT_PORT=$(docker inspect --format '{{(index (index .NetworkSettings.Ports "7687/tcp") 0).HostPort}}' "$DB")
 else
