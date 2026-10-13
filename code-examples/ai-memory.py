@@ -39,7 +39,7 @@ def _supports_color() -> bool:
         return True
     # Windows consoles ignore ANSI escapes until virtual-terminal processing is
     # switched on, and older ones cannot do it at all -- in which case fall back
-    # to plain text instead of printing "[1;36m" at the user.
+    # to plain text instead of printing "[38;5;208m" at the user.
     try:
         import ctypes
 
@@ -53,11 +53,16 @@ def _supports_color() -> bool:
         return False
 
 
-CYAN, RESET = ("\033[1;36m", "\033[0m") if _supports_color() else ("", "")
+# Memgraph orange (#FB6E00) for the heading arrows, as ai-memory.sh draws its own;
+# it passes the escape it chose for this terminal, else the xterm-256 nearest.
+if _supports_color():
+    ACCENT, BOLD, RESET = os.environ.get("AI_MEMORY_ACCENT") or "\033[38;5;208m", "\033[1m", "\033[0m"
+else:
+    ACCENT = BOLD = RESET = ""
 
 
 def log(msg: str) -> None:
-    print(f"\n{CYAN}==> {msg}{RESET}")
+    print(f"\n{ACCENT}==>{RESET} {BOLD}{msg}{RESET}")
 
 
 def link_user_session(db: Memgraph, user_id: str, session_id: str) -> None:

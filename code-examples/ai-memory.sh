@@ -86,7 +86,56 @@ else
 fi
 
 # ---- Helpers ----------------------------------------------------------------
-log() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
+# Memgraph's brand colours: orange (#FB6E00) as the accent, gray (#857F87) for
+# everything quieter, the nearest xterm-256 colours where there is no truecolor.
+if [[ -t 1 && -z "${NO_COLOR:-}" ]]; then
+  if [[ "${COLORTERM:-}" == truecolor || "${COLORTERM:-}" == 24bit ]]; then
+    ORANGE=$'\033[38;2;251;110;0m'; GRAY=$'\033[38;2;133;127;135m'; GREEN=$'\033[38;2;25;175;102m'
+  else
+    ORANGE=$'\033[38;5;208m'; GRAY=$'\033[38;5;245m'; GREEN=$'\033[38;5;35m'
+  fi
+  BOLD=$'\033[1m'; OFF=$'\033[0m'
+else
+  ORANGE=''; GRAY=''; GREEN=''; BOLD=''; OFF=''
+fi
+# The Python client reads this to colour its own headings the same way.
+export AI_MEMORY_ACCENT="$ORANGE"
+
+log() { printf '\n%s==>%s %s%s%s\n' "$ORANGE" "$OFF" "$BOLD" "$*" "$OFF"; }
+
+banner() {
+  # The Memgraph wordmark: letter faces in orange, their drop shadow in gray.
+  # Too narrow a terminal gets the name in one word instead.
+  local cols line
+  cols=$(tput cols 2>/dev/null || echo 80)
+  if (( cols < 73 )); then
+    printf '\n%s%smemgraph%s  AI memory\n' "$BOLD" "$ORANGE" "$OFF"
+    return
+  fi
+  echo
+  while IFS= read -r line; do
+    line="${line//█/${ORANGE}█${GRAY}}"
+    printf '%s%s%s\n' "$GRAY" "$line" "$OFF"
+  done <<'WORDMARK'
+███╗   ███╗███████╗███╗   ███╗ ██████╗ ██████╗  █████╗ ██████╗ ██╗  ██╗
+████╗ ████║██╔════╝████╗ ████║██╔════╝ ██╔══██╗██╔══██╗██╔══██╗██║  ██║
+██╔████╔██║█████╗  ██╔████╔██║██║  ███╗██████╔╝███████║██████╔╝███████║
+██║╚██╔╝██║██╔══╝  ██║╚██╔╝██║██║   ██║██╔══██╗██╔══██║██╔═══╝ ██╔══██║
+██║ ╚═╝ ██║███████╗██║ ╚═╝ ██║╚██████╔╝██║  ██║██║  ██║██║     ██║  ██║
+╚═╝     ╚═╝╚══════╝╚═╝     ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝  ╚═╝
+WORDMARK
+  # Under it, a small graph: nodes in orange, edges in gray.
+  while IFS= read -r line; do
+    line="${line//●/${ORANGE}●${GRAY}}"
+    printf '%s%s%s\n' "$GRAY" "$line" "$OFF"
+  done <<'GRAPH'
+●───────●──────────────●─────────●────────────────●──────────●────────●
+ ╲     ╱ ╲            ╱           ╲              ╱            ╲      ╱
+  ●───●   ●──────────●             ●────────────●              ●────●
+GRAPH
+  echo
+  printf '%sAI memory: what an assistant knows, did, and knows how to do, as one graph.%s\n' "$GRAY" "$OFF"
+}
 
 query() {
   # Run one or more Cypher statements (read from stdin) against Memgraph,
@@ -108,6 +157,8 @@ if [[ "${1:-}" == "clean" ]]; then
   teardown
   exit 0
 fi
+
+banner
 
 # ---- 0. Prerequisite checks --------------------------------------------------
 # Only the two high-level dependencies are checked (never installed) here: a
@@ -216,7 +267,7 @@ fi
 
 MEMGRAPH_URL="bolt://localhost:${BOLT_PORT}" "$VENV/bin/python" "$PY_FILE"
 
-printf '\n\033[1;32m✓ AI memory is live.\033[0m To see the graph in Memgraph Lab:\n'
+printf '\n%s%s✓ AI memory is live.%s To see the graph in Memgraph Lab:\n' "$BOLD" "$GREEN" "$OFF"
 cat <<EOF
   docker run -d --name ${LAB} --network ${NET} -p 3000:3000 \\
     -e QUICK_CONNECT_MG_HOST=${DB} -e QUICK_CONNECT_MG_PORT=7687 ${LAB_IMAGE}
