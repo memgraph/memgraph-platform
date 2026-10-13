@@ -28,8 +28,10 @@ graph traversal, not three separate lookups glued together.
 1. **Spin up** the memory store (Memgraph).
 2. **Write** the three memory types for a client the assistant has worked with,
    through `sessions-graph`/`actions-graph`/`skills-graph`.
-3. **Recall** each type, then all three together to answer *"Schedule a
+3. **Recall** all three together, in one traversal, to answer *"Schedule a
    follow-up with the client like last time."*
+4. **Hand over** to Context Graph's setup, so your own coding agents write this
+   kind of memory from their real sessions.
 
 ## What You Need
 
@@ -46,25 +48,26 @@ the three Context Graph packages from PyPI into a throwaway virtualenv
 (`.ai-memory-venv/`) next to the script — no repository checkout needed.
 
 No API keys: this example writes structured memory directly, the same way an
-application would call these packages. Automatic, LLM-backed extraction from
-raw conversation text is a separate, opt-in step — see
-[Where to Go Next](#where-to-go-next).
+application would call these packages.
 
 ## Run It
 
 macOS / Linux:
 
 ```bash
-./ai-memory.sh          # bring everything up, seed memory, run recall
+./ai-memory.sh          # bring everything up, seed memory, recall, then open Context Graph's setup
 ./ai-memory.sh clean    # stop and remove everything the script created
 ```
 
-The shell installer tries host Bolt port `7687`. If another container or process
-already owns it, Docker assigns a free port and the script prints the resulting
-URL. Existing services keep running. To choose a port explicitly, run
+The script tries host Bolt port `7687`. If another container or process already
+owns it, Docker assigns a free port and the script prints the resulting URL.
+Existing services keep running. To choose a port explicitly, run
 `MEMGRAPH_PORT=7688 ./ai-memory.sh`; an occupied explicit port fails with an
-instruction to choose another. The printed Context Graph install commands pass
-the selected port through so the plugin writes to this demo's database.
+instruction to choose another.
+
+On a terminal the script ends by opening Context Graph's setup (see
+[Wire It Into Your Agents](#wire-it-into-your-agents)); set
+`AI_MEMORY_SKIP_SETUP=1` to only print its command instead.
 
 Windows (PowerShell 5.1 or 7+), same steps, same output:
 
@@ -136,18 +139,8 @@ MEMGRAPH_URL=bolt://localhost:7687 .ai-memory-venv/bin/python ai-memory.py
 
 ### 4. Recall
 
-Each memory type is a small, package-provided lookup:
-
-```python
-memories.get_memories("acme-corp")               # semantic
-actions.list_sessions(limit=1)                    # episodic: most recent session
-actions.get_session_actions(session.session_id)   # ... and what happened in it
-skills.get_skill("schedule-follow-up")            # procedural
-```
-
-The payoff is the **interconnected** recall: one Cypher traversal through the
-shared `User`/`Session` nodes joins all three to answer *"schedule a follow-up
-with the client like last time"*:
+One Cypher traversal through the shared `User`/`Session` nodes joins all three
+to answer *"schedule a follow-up with the client like last time"*:
 
 ```cypher
 MATCH (u:User {user_id: "acme-corp"})-[:HAS_MEMORY]->(mem:Memory)
@@ -162,18 +155,9 @@ It returns *Dana Lee's Acme Corp facts, the `session-acme-followup` session,
 the `schedule-follow-up` skill and its steps* — everything needed for the
 assistant to reply *"Done. 30 min Tuesday slot booked, invite sent."*
 
-### 5. Inspect the memory ontology
+### 5. Explore (optional)
 
-`SHOW SCHEMA INFO` returns the whole ontology (labels, relationship types,
-properties) in constant time, so an agent can learn the shape of memory before
-querying it — now the real `User`/`Session`/`Memory`/`Action`/`Skill` schema
-the Context Graph packages created, not a demo-only schema:
-
-```cypher
-SHOW SCHEMA INFO;
-```
-
-### 6. Explore visually (optional)
+Open the graph in Memgraph Lab:
 
 ```bash
 docker run -d --name aimemory-lab --network aimemory-net -p 3000:3000 \
@@ -182,30 +166,28 @@ docker run -d --name aimemory-lab --network aimemory-net -p 3000:3000 \
 # open http://localhost:3000  ->  MATCH p=()-[]-() RETURN p;
 ```
 
-## Wire It Into a Real Harness
+`SHOW SCHEMA INFO;` returns the memory's whole ontology (labels, relationship
+types, properties) in constant time, so an agent can learn its shape before
+querying it.
 
-The seeding above did by hand what a real coding-assistant plugin does
-automatically. One command sets up
-[Context Graph](https://github.com/memgraph/ai-toolkit/tree/main/context-graph)
-for every coding agent on your machine (Claude Code, Codex, Copilot CLI,
-Cursor, OpenCode, Antigravity CLI, Grok Build):
+## Wire It Into Your Agents
+
+The demo wrote memory by hand. On a terminal, `ai-memory.sh` then opens
+[Context Graph](https://github.com/memgraph/ai-toolkit/tree/main/context-graph)'s
+setup, which does it automatically for the coding agents on your machine
+(Claude Code, Codex, Copilot CLI, Cursor, OpenCode, Antigravity CLI, Grok
+Build). To run it yourself (on Windows, from WSL or Git Bash):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/memgraph/ai-toolkit/main/context-graph/scripts/install.sh | bash
 ```
 
-In a terminal it shows what it found and what it will do, and changes nothing
-until you confirm. It gets a durable Memgraph of its own rather than this
-demo's (it recognises the demo's container as disposable), wires each agent,
-sets your identity (your `git config user.name` unless you change it) and
-checks the hooks with `doctor`. `memgraph-context-graph uninstall` undoes the
-wiring. See the
+It shows what it found and changes nothing until you confirm. It keeps its own
+Memgraph, separate from this throwaway one, and wires each agent you pick.
+`memgraph-context-graph ui` then shows what your agents capture, and
+`memgraph-context-graph uninstall` undoes the wiring. See the
 [Context Graph guide](https://github.com/memgraph/ai-toolkit/blob/main/context-graph/README.md#getting-started)
-for its flags, reconciliation and cross-component queries.
-
-Every real session then writes `Memory`/`Action`/`Skill` nodes automatically —
-the same nodes `ai-memory.py` just wrote by hand — and the next session reads
-that memory back before it starts.
+for the rest.
 
 ## Clean Up
 
@@ -221,10 +203,6 @@ whose Memgraph is separate.
 
 - [Memgraph AI Memory](https://memgraph.com/ai-memory) (the three memory types and
   the graph-vs-vector argument).
-- Turn on **automatic, LLM-backed extraction**: this example wrote Memory nodes
-  by hand; `sessions-graph`'s reconciliation step instead extracts entities
-  from real session transcripts via `unstructured2graph` + LightRAG — see
-  [sessions-graph § reconciliation](https://github.com/memgraph/ai-toolkit/blob/main/context-graph/sessions-graph/README.md#session-reconciliation).
 - Add **semantic recall by similarity**: `sessions-graph` already maintains a
   full-text index over `Memory.content`; pair it with Memgraph
   [vector search](https://memgraph.com/docs/querying/vector-search) for

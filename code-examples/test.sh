@@ -226,36 +226,19 @@ check_ai_memory() {
   want "Memgraph came up" "Memgraph is up on bolt://localhost:7687"
   want "Context Graph packages were installed" \
     "installing sessions-graph, actions-graph, skills-graph"
-  # Episodic write (actions-graph).
-  want "episodic memory was written" \
-    "Wrote 2 Sessions, 4 Actions"
-  # Semantic write (sessions-graph).
-  want "semantic memory was written" "Wrote 1 Memory\."
-  # Procedural write (skills-graph).
-  want "procedural memory was written" "Wrote 1 Skill, 1 USED_SKILL usage\."
-  # Recall must return content, not empty rows.
-  want "semantic recall returned the client facts" "Dana Lee"
-  want "episodic recall returned the latest session" \
-    "session session-acme-followup"
-  want "episodic recall listed the tool call and its result" \
-    "tool=schedule_meeting"
-  want "procedural recall returned the skill body" "Send a calendar invite"
+  want "all three memory types were written" "procedural  how it does things"
   # The interconnected traversal is the whole point of the example: one query
-  # joining semantic + episodic + procedural. All four fields must be populated.
-  want "joined recall: client facts" "client_facts  : .*Acme Corp"
-  want "joined recall: last session" "last_session  : session-acme-followup"
-  want "joined recall: skill" "skill         : schedule-follow-up"
-  want "joined recall: how-to" "how_to        : 1\. Book a calendar slot"
-  reject "joined recall has no null fields" \
-    "^(client_facts|last_session|skill|how_to) +: *(Null|None)? *$"
-  # SHOW SCHEMA INFO must return the ontology the walkthrough's table promises --
-  # all three memory types and the relationships that join them. The previous
-  # check for the string "schema" matched the script's own heading.
-  for token in Memory Session Skill Action \
-               HAS_MEMORY HAD_SESSION HAS_ACTION USED_SKILL FOLLOWED_BY; do
-    want "schema info lists $token" "\\\\\"$token\\\\\""
-  done
+  # joining semantic + episodic + procedural. Every field must be populated.
+  want "joined recall: client facts" "what it knows  .*Dana Lee"
+  want "joined recall: last session" \
+    "last time      session-acme-followup: schedule_meeting at 2026-07-07"
+  want "joined recall: skill" "how to         schedule-follow-up"
+  want "joined recall: how-to" "^ +1\. Book a calendar slot"
+  want "joined recall: how-to, second step" "^ +2\. Send a calendar invite"
+  reject "joined recall has no null fields" "^  (what it knows|last time|how to) +(None|Null)"
   want "final banner" "AI memory is live"
+  want "setup was skipped, its command printed" "context-graph/scripts/install.sh \| bash"
+  reject "setup did not run" "Opening its setup"
   want_no_query_errors
   want_running aimemory-memgraph
 }
@@ -410,7 +393,9 @@ run_example() {
   limit="$(timeout_for "$name")"
   note "running: $name.sh  (timeout ${limit}s, log: $LOG)"
   # OPENAI_API_KEY was unset on purpose before this loop -- see the header.
-  run_with_timeout "$limit" "$script" >"$LOG" 2>&1
+  # AI_MEMORY_SKIP_SETUP keeps ai-memory from opening Context Graph's setup,
+  # which would rewire the agents on this machine.
+  AI_MEMORY_SKIP_SETUP=1 run_with_timeout "$limit" "$script" >"$LOG" 2>&1
   status=$?
 
   if [ "$status" -eq 0 ]; then

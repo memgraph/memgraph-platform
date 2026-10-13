@@ -17,12 +17,14 @@
 # The point is the interconnection: semantic fact -> episodic event -> procedural
 # response. This script seeds all three for the page's own example ("Schedule a
 # follow-up with the client like last time") and recalls them by traversal --
-# using the actual Context Graph packages a live coding-assistant plugin uses
+# using the actual packages Context Graph uses to capture coding agents' sessions
 # (github.com/memgraph/ai-toolkit/tree/main/context-graph), not a hand-rolled
 # schema:
 #   - sessions-graph : semantic memory  -- durable, user-owned facts
 #   - actions-graph   : episodic memory -- timestamped session/action history
 #   - skills-graph    : procedural memory -- named, reusable how-tos
+# It then opens Context Graph's own setup, so your agents write that memory from
+# real sessions (on a terminal only; AI_MEMORY_SKIP_SETUP=1 skips it).
 #
 # Requirements -- two things you install once, yourself; the script checks for
 # both up front and prints how to get them if they are missing:
@@ -54,6 +56,7 @@ DB="aimemory-memgraph"
 # container carrying it, so `clean` can't silently remove where real sessions are written.
 DISPOSABLE_LABEL="com.memgraph.ai-memory.disposable=true"
 LAB="aimemory-lab"
+CONTEXT_GRAPH_INSTALL_URL="https://raw.githubusercontent.com/memgraph/ai-toolkit/main/context-graph/scripts/install.sh"
 PORT_EXPLICIT="${MEMGRAPH_PORT:+1}"
 BOLT_PORT="${MEMGRAPH_PORT:-7687}"
 
@@ -211,41 +214,43 @@ if [[ ! -f "$PY_FILE" ]]; then
     "Check your network, or clone https://github.com/memgraph/memgraph-platform and run code-examples/ai-memory.sh"
 fi
 
-log "Writing and recalling semantic, episodic, and procedural memory"
 MEMGRAPH_URL="bolt://localhost:${BOLT_PORT}" "$VENV/bin/python" "$PY_FILE"
 
-# ---- 4. Inspect the memory ontology ------------------------------------------
-log "Memory ontology via SHOW SCHEMA INFO (returned in constant time)"
-echo "SHOW SCHEMA INFO;" | query || echo "(enable with --schema-info-enabled, already set)"
-
-# ---- Wrap up ----------------------------------------------------------------
+printf '\n\033[1;32m✓ AI memory is live.\033[0m To see the graph in Memgraph Lab:\n'
 cat <<EOF
-
-$(printf '\033[1;32m✓ AI memory is live.\033[0m') The assistant can now answer "like last time"
-by traversing: semantic (Acme Corp, New York) -> episodic (last session:
-follow-up meeting) -> procedural (schedule-follow-up skill).
-
-Explore the memory graph visually with Memgraph Lab:
   docker run -d --name ${LAB} --network ${NET} -p 3000:3000 \\
     -e QUICK_CONNECT_MG_HOST=${DB} -e QUICK_CONNECT_MG_PORT=7687 ${LAB_IMAGE}
-  open http://localhost:3000     # then run:  MATCH p=()-[]-() RETURN p;
+  then open http://localhost:3000 and run  MATCH p=()-[]-() RETURN p;
+EOF
 
-Wire this into a REAL harness so it collects sessions automatically (no seeding
-by hand). One command sets up Context Graph for every coding agent on this
-machine (Claude Code, Codex, Copilot CLI, Cursor, OpenCode, Antigravity CLI,
-Grok Build); in a terminal it asks before changing anything:
+# ---- 4. Hand over to Context Graph -------------------------------------------
+# The demo wrote memory by hand; Context Graph writes it from real coding agents.
+# Its setup is interactive and asks before changing anything, so it only runs
+# with a person at the terminal: stdout a TTY and a /dev/tty to read keys from
+# (piped into bash, stdin is this script). Tests set AI_MEMORY_SKIP_SETUP=1.
+log "Next: give your coding agents this memory"
+echo "Context Graph records Claude Code, Codex, Cursor and other agents' sessions into"
+echo "a Memgraph of its own (not this throwaway one) so they can recall them later."
+if [[ -z "${AI_MEMORY_SKIP_SETUP:-}" && -t 1 ]] && (exec </dev/tty) 2>/dev/null; then
+  echo "Opening its setup; nothing changes until you confirm there."
+  if curl -fsSL "$CONTEXT_GRAPH_INSTALL_URL" | bash; then
+    # Setup installs the viewer unless it was unticked; offer it only when it's there.
+    if memgraph-context-graph ui --version >/dev/null 2>&1; then
+      printf '\nOpen the Context Graph viewer now? [Y/n] '
+      read -r answer </dev/tty || answer=n
+      [[ "$answer" =~ ^[Nn] ]] || memgraph-context-graph ui </dev/tty || true
+    fi
+  else
+    echo "Setup didn't finish. Run it again whenever you like:"
+    echo "  curl -fsSL $CONTEXT_GRAPH_INSTALL_URL | bash"
+  fi
+else
+  echo "Set it up with:"
+  echo "  curl -fsSL $CONTEXT_GRAPH_INSTALL_URL | bash"
+fi
 
-  curl -fsSL https://raw.githubusercontent.com/memgraph/ai-toolkit/main/context-graph/scripts/install.sh | bash
+cat <<EOF
 
-It gets a durable Memgraph of its own rather than this demo's, which it
-recognises as disposable, then wires each agent it finds, sets your identity
-(your git user.name unless you change it) and checks the hooks. Undo it with
-'memgraph-context-graph uninstall'. More:
-  https://github.com/memgraph/ai-toolkit/tree/main/context-graph#getting-started
-
-Every real session then writes Memory/Action/Skill nodes automatically, the
-same nodes ai-memory.py just wrote by hand.
-
-Tear the demo down whenever you like; the installer's Memgraph is separate:
+Remove the demo when you're done (Context Graph's Memgraph is separate):
   $CLEAN_HINT
 EOF

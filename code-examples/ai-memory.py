@@ -2,7 +2,8 @@
 """AI Memory with Memgraph: seed + recall using the real Context Graph packages.
 
 Unlike a hand-rolled schema, this writes semantic/episodic/procedural memory
-through the same libraries a live coding-assistant plugin uses:
+through the same libraries Context Graph uses when it captures a coding agent's
+sessions:
 
   - sessions-graph : semantic memory  -- durable, user-owned facts (Memory nodes)
   - actions-graph   : episodic memory -- timestamped session/action history
@@ -81,58 +82,45 @@ def seed(db: Memgraph) -> None:
     memories.setup()
     skills.setup()
 
-    # Sessions must exist before anything else references their session_id
-    # (save_memory's provenance MERGE and record_skill_usage's MERGE would
-    # otherwise race actions-graph's own unique constraint on Session).
-    log("Episodic: what the system EXPERIENCED (two real sessions, in order)")
-    actions.create_session(
-        Session(
-            session_id=KICKOFF_SESSION,
-            started_at="2026-06-30T15:00:00+00:00",
-            ended_at="2026-06-30T15:30:00+00:00",
-            status=ActionStatus.COMPLETED,
-        )
-    )
-    actions.create_session(
-        Session(
-            session_id=FOLLOWUP_SESSION,
-            started_at="2026-07-07T15:00:00+00:00",
-            ended_at="2026-07-07T15:30:00+00:00",
-            status=ActionStatus.COMPLETED,
-        )
-    )
-    link_user_session(db, USER_ID, KICKOFF_SESSION)
-    link_user_session(db, USER_ID, FOLLOWUP_SESSION)
+    log("Writing what an assistant remembers about one client")
 
-    for session_id, when in (
-        (KICKOFF_SESSION, "2026-06-30T15:05:00+00:00"),
-        (FOLLOWUP_SESSION, "2026-07-07T15:05:00+00:00"),
-    ):
+    # Episodic: two past sessions, each booking a meeting. Sessions must exist
+    # before anything else references their session_id (save_memory's
+    # provenance MERGE and record_skill_usage's MERGE would otherwise race
+    # actions-graph's own unique constraint on Session).
+    for session_id, day in ((KICKOFF_SESSION, "2026-06-30"), (FOLLOWUP_SESSION, "2026-07-07")):
+        actions.create_session(
+            Session(
+                session_id=session_id,
+                started_at=f"{day}T15:00:00+00:00",
+                ended_at=f"{day}T15:30:00+00:00",
+                status=ActionStatus.COMPLETED,
+            )
+        )
+        link_user_session(db, USER_ID, session_id)
         call = actions.record_tool_call(
             session_id=session_id,
             tool_name="schedule_meeting",
             tool_input={"client": "Acme Corp", "weekday": "Tuesday", "duration_min": 30},
             tool_use_id=f"{session_id}-call",
-            timestamp=when,
+            timestamp=f"{day}T15:05:00+00:00",
         )
         actions.record_tool_result(
             session_id=session_id,
             tool_use_id=call.tool_use_id,
             tool_name="schedule_meeting",
             content="booked",
-            timestamp=when,
+            timestamp=f"{day}T15:05:00+00:00",
         )
-    print("Wrote 2 Sessions, 4 Actions (ToolCall + ToolResult each, FOLLOWED_BY sequenced).")
 
-    log("Semantic: what the system KNOWS")
+    # Semantic: a durable fact about the client.
     memories.save_memory(
         user_id=USER_ID,
         content="Acme Corp's contact is Dana Lee (timezone America/New_York); they prefer 30-minute meetings.",
         session_id=KICKOFF_SESSION,
     )
-    print("Wrote 1 Memory.")
 
-    log("Procedural: what the system KNOWS HOW TO DO")
+    # Procedural: a reusable how-to, used in the latest session.
     skills.add_skill(
         Skill(
             name=SKILL_NAME,
@@ -149,32 +137,17 @@ def seed(db: Memgraph) -> None:
         action="used",
         timestamp="2026-07-07T15:06:00+00:00",
     )
-    print("Wrote 1 Skill, 1 USED_SKILL usage.")
+
+    print("  semantic    what it knows        1 fact about the client")
+    print("  episodic    what it did          2 past sessions, a meeting booked in each")
+    print("  procedural  how it does things   1 skill, used last time")
 
 
 def recall(db: Memgraph) -> None:
-    actions = ActionsGraph(db)
-    memories = SessionsGraph(db)
-    skills = SkillGraph(db)
-
-    log("Semantic recall: what do we know about the client?")
-    for m in memories.get_memories(USER_ID):
-        print(f"- {m.content}")
-
-    log("Episodic recall: what happened last time? (most recent session)")
-    last_session = actions.list_sessions(limit=1)[0]
-    print(f"- session {last_session.session_id} started_at={last_session.started_at}")
-    for a in actions.get_session_actions(last_session.session_id):
-        print(f"  - {a.action_type.value} tool={getattr(a, 'tool_name', None)} at {a.timestamp}")
-
-    log("Procedural recall: how do we schedule a follow-up?")
-    skill = skills.get_skill(SKILL_NAME)
-    print(skill.content)
-
-    log("Interconnected recall: one traversal joining all three")
-    # semantic (User-HAS_MEMORY->Memory) + episodic (User-HAD_SESSION->Session
-    # -HAS_ACTION->Action) + procedural (Session-USED_SKILL->Skill), all through
-    # the shared User/Session nodes -- see context-graph/CONTEXT-MAP.md.
+    log('Recall: "Schedule a follow-up with the client like last time"')
+    # One traversal through the shared User/Session nodes joins all three:
+    # semantic (User-HAS_MEMORY->Memory), episodic (User-HAD_SESSION->Session
+    # -HAS_ACTION->Action) and procedural (Session-USED_SKILL->Skill).
     rows = db.query(
         """
         MATCH (u:User {user_id: $user_id})-[:HAS_MEMORY]->(mem:Memory)
@@ -186,11 +159,13 @@ def recall(db: Memgraph) -> None:
         """,
         params={"user_id": USER_ID},
     )
+    print("  One graph traversal, all three kinds of memory joined:")
     for row in rows:
-        print(f"client_facts  : {row['client_facts']}")
-        print(f"last_session  : {row['last_session']} (at {row['last_meeting_at']})")
-        print(f"skill         : {row['skill']}")
-        print(f"how_to        : {row['how_to']}")
+        how_to = (row["how_to"] or "").replace("\n", "\n" + " " * 17)
+        print(f"  what it knows  {row['client_facts']}")
+        print(f"  last time      {row['last_session']}: schedule_meeting at {row['last_meeting_at']}")
+        print(f"  how to         {row['skill']}")
+        print(f"                 {how_to}")
 
 
 if __name__ == "__main__":
