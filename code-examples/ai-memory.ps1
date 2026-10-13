@@ -138,13 +138,6 @@ function Invoke-MgConsole {
     }
 }
 
-function Invoke-Cypher {
-    # Run one or more Cypher statements against Memgraph and show the result.
-    param([Parameter(Mandatory = $true)][string]$Cypher)
-    Invoke-MgConsole -Cypher $Cypher
-    if ((Get-ExitCode) -ne 0) { throw "mgconsole exited with code $(Get-ExitCode)." }
-}
-
 function Test-Cypher {
     # Same, but silent: used to poll until Memgraph accepts Bolt connections.
     param([string]$Cypher = 'RETURN 1;')
@@ -292,21 +285,12 @@ try {
         }
     }
 
-    Write-Step 'Writing and recalling semantic, episodic, and procedural memory'
     $env:MEMGRAPH_URL = "bolt://localhost:${BoltPort}"
     try {
         & $VenvPython $PyFile
         if ((Get-ExitCode) -ne 0) { throw "ai-memory.py exited with code $(Get-ExitCode)." }
     } finally {
         Remove-Item Env:\MEMGRAPH_URL -ErrorAction SilentlyContinue
-    }
-
-    # ---- 4. Inspect the memory ontology --------------------------------------
-    Write-Step 'Memory ontology via SHOW SCHEMA INFO (returned in constant time)'
-    try {
-        Invoke-Cypher 'SHOW SCHEMA INFO;'
-    } catch {
-        Write-Host '(enable with --schema-info-enabled, already set)'
     }
 } catch {
     Write-Host ''
@@ -322,32 +306,23 @@ try {
 
 # ---- Wrap up ----------------------------------------------------------------
 Write-Host ''
-Write-Host "$([char]0x2713) AI memory is live." -ForegroundColor Green
+Write-Host "$([char]0x2713) AI memory is live." -ForegroundColor Green -NoNewline
 Write-Host @"
-The assistant can now answer "like last time" by traversing: semantic (Acme
-Corp, New York) -> episodic (last session: follow-up meeting) -> procedural
-(schedule-follow-up skill).
-
-Explore the memory graph visually with Memgraph Lab:
+ To see the graph in Memgraph Lab:
   docker run -d --name $Lab --network $Net -p 3000:3000 -e QUICK_CONNECT_MG_HOST=$Db -e QUICK_CONNECT_MG_PORT=7687 $LabImage
-  start http://localhost:3000     # then run:  MATCH p=()-[]-() RETURN p;
+  then open http://localhost:3000 and run  MATCH p=()-[]-() RETURN p;
+"@
 
-Wire this into a REAL harness so it collects sessions automatically (no seeding
-by hand). One command sets up Context Graph for every coding agent on this
-machine (Claude Code, Codex, Copilot CLI, Cursor, OpenCode, Antigravity CLI,
-Grok Build); in a terminal it asks before changing anything (run it from WSL or Git Bash):
-
+# ---- 4. Hand over to Context Graph -------------------------------------------
+# ai-memory.sh opens Context Graph's setup itself; its installer is a bash
+# script, so on Windows this prints the command to run from WSL or Git Bash.
+Write-Step 'Next: give your coding agents this memory'
+Write-Host @"
+Context Graph records Claude Code, Codex, Cursor and other agents' sessions into
+a Memgraph of its own (not this throwaway one) so they can recall them later.
+Set it up from WSL or Git Bash with:
   curl -fsSL https://raw.githubusercontent.com/memgraph/ai-toolkit/main/context-graph/scripts/install.sh | bash
 
-It gets a durable Memgraph of its own rather than this demo's, which it
-recognises as disposable, then wires each agent it finds, sets your identity
-(your git user.name unless you change it) and checks the hooks. Undo it with
-'memgraph-context-graph uninstall'. More:
-  https://github.com/memgraph/ai-toolkit/tree/main/context-graph#getting-started
-
-Every real session then writes Memory/Action/Skill nodes automatically, the
-same nodes ai-memory.py just wrote by hand.
-
-Tear the demo down whenever you like; the installer's Memgraph is separate:
-  .i-memory.ps1 clean
+Remove the demo when you're done (Context Graph's Memgraph is separate):
+  .\ai-memory.ps1 clean
 "@
