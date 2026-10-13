@@ -197,12 +197,12 @@ CONTEXT_GRAPH_RUNTIME=codex bash -c "$(curl -fsSL https://raw.githubusercontent.
 ```
 
 It registers the runtime's plugin marketplace and installs the plugin — the
-step a bare `agent-context-graph bootstrap` can't do, since that's what
+step a bare `memgraph-context-graph bootstrap` can't do, since that's what
 actually wires hooks into the runtime — installs the CLI with all three
 connectors, sets your identity, and verifies with `doctor`. It even starts
 Memgraph itself if nothing's reachable, so on a clean machine it doubles as
 an alternative to steps 1–2 above. Override identity with
-`AGENT_CONTEXT_GRAPH_USER_ID` (defaults to `git config user.name`); see the
+`MEMGRAPH_CONTEXT_GRAPH_USER_ID` (defaults to `git config user.name`); see the
 [Context Graph guide](https://github.com/memgraph/ai-toolkit/blob/main/context-graph/README.md#getting-started-claude-code-or-codex)
 for the rest of the configurable env vars and defaults, reconciliation, and
 cross-component queries.

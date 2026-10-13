@@ -237,9 +237,9 @@ Code or Codex end to end, defaulting to this same Memgraph instance
   MEMGRAPH_PORT=${BOLT_PORT} CONTEXT_GRAPH_RUNTIME=codex bash -c "\$(curl -fsSL https://raw.githubusercontent.com/memgraph/ai-toolkit/main/context-graph/scripts/install.sh)"
 
 It registers the runtime's plugin marketplace, installs the plugin (the step a
-bare 'agent-context-graph bootstrap' can't do -- that's what wires hooks into
+bare 'memgraph-context-graph bootstrap' can't do -- that's what wires hooks into
 the runtime), installs the CLI with all three connectors, sets your identity
-(defaults to your git user.name; override with AGENT_CONTEXT_GRAPH_USER_ID),
+(defaults to your git user.name; override with MEMGRAPH_CONTEXT_GRAPH_USER_ID),
 and verifies with doctor. Full env var list and defaults:
   https://github.com/memgraph/ai-toolkit/tree/main/context-graph#getting-started-claude-code-or-codex
 
