@@ -2,17 +2,15 @@
 #
 # Smoke-test every example in this folder on Windows.
 #
-# Each example is a self-contained demo that starts containers on fixed ports, so
-# they cannot run at the same time (ai-memory.ps1 and agentic-graphrag.ps1 both
-# publish Bolt on 7687). This runs them one at a time, in a child PowerShell, and
+# Each example is a self-contained demo that may start containers on fixed ports, so
+# they cannot run at the same time. This runs them one at a time, in a child PowerShell, and
 # tears each one down before and after, then reports pass/fail per example.
 #
 # An example passes when it exits 0 AND prints its success marker, so a demo that
 # fails halfway but still reaches its closing banner cannot be mistaken for a
 # working one.
 #
-# Requirements: whatever the examples need (Docker Desktop running, git, Python
-# 3.10-3.13). Missing ones are reported per example instead of failing the run.
+# Requirements: whatever the examples need (Docker Desktop running, git). Missing ones are reported per example instead of failing the run.
 #
 # Usage (PowerShell 5.1 or PowerShell 7+):
 #   .\test.ps1                        # run all examples, clean up after each
@@ -59,8 +57,8 @@ $Examples = @(
     [pscustomobject]@{
         Name    = 'ai-memory'
         Script  = 'ai-memory.ps1'
-        Marker  = 'AI memory is live.'
-        Needs   = @('docker', 'python')
+        Marker  = 'Context Graph sets it up'
+        Needs   = @()
     },
     [pscustomobject]@{
         Name    = 'agentic-ai'
@@ -121,7 +119,7 @@ function Test-Python {
 }
 
 function Get-MissingRequirement {
-    param([Parameter(Mandatory = $true)][string[]]$Needs)
+    param([Parameter(Mandatory = $true)][AllowEmptyCollection()][string[]]$Needs)
     foreach ($need in $Needs) {
         $problem = switch ($need) {
             'docker' { Test-Docker }

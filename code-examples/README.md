@@ -13,8 +13,8 @@ macOS/Linux and `.ps1` for Windows PowerShell.
 
 One harness per platform, each covering all three examples. Both run the
 examples **one at a time** and tear them down before and after: every demo
-binds fixed host ports (`ai-memory` and `agentic-graphrag` both publish Bolt on
-7687, `agentic-ai` publishes 7688), so parallel runs would collide. Both also
+binds fixed host ports (`agentic-graphrag` publishes Bolt on 7687, `agentic-ai`
+on 7688; `ai-memory` starts nothing itself), so parallel runs would collide. Both also
 hide `OPENAI_API_KEY` from the examples, so `agentic-graphrag` stops after its
 three atomic pipelines instead of blocking on the optional Streamlit app.
 
@@ -33,7 +33,7 @@ work directory afterwards.
 ./test.sh clean                 # tear down every example, run nothing
 ```
 
-Needs what the examples need — Docker, git, and Python 3.10-3.13 — plus `curl`,
+Needs what the examples need — Docker and git — plus `curl`,
 to check that the MCP endpoint really answers. Nothing else: GNU `timeout` (or
 Homebrew's `gtimeout`) is used when present, otherwise a built-in watchdog
 enforces the same per-example ceiling. Before running anything it checks that
@@ -56,6 +56,6 @@ success banner.
 ```
 
 Prerequisites an example needs but the machine lacks (Docker not running, no
-`git`, no Python 3.10–3.13) are reported as `SKIP` rather than `FAIL`.
+`git`) are reported as `SKIP` rather than `FAIL`.
 Per-example logs land in `test-logs-windows\`; on failure the tail is printed
 inline.
