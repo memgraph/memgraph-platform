@@ -48,6 +48,14 @@ macOS / Linux:
 ./agentic-graphrag.sh clean    # stop containers and remove the work dir
 ```
 
+The shell script tries host ports `7687` (Bolt) and `8000` (MCP). If another
+container or process already owns one, Docker assigns a free port and the
+script prints the resulting URLs. Existing services keep running. To choose
+the ports, run `MEMGRAPH_PORT=7688 MCP_PORT=8001 ./agentic-graphrag.sh`; an
+occupied explicit port fails with an instruction to choose another. The
+optional agentic app connects only to `bolt://localhost:7687`, so it launches
+only when the demo's Memgraph got that port.
+
 Windows (PowerShell 5.1 or 7+), same steps, same output:
 
 ```powershell
@@ -90,7 +98,7 @@ graph), and the MCP server is pointed at it:
 docker network create agenticgraphrag-net
 
 docker run -d --name agenticgraphrag-memgraph --network agenticgraphrag-net \
-  -p 7687:7687 -p 7444:7444 \
+  -p 7687:7687 \
   memgraph/memgraph-mage:3.12.0 --schema-info-enabled=True
 
 docker run -d --name agenticgraphrag-mcp --network agenticgraphrag-net \
