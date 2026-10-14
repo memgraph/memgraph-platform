@@ -15,8 +15,7 @@
 # that example's own 'clean' subcommand, so a failed run cannot leak containers
 # into the next one.
 #
-# Requirements: the union of what the examples need -- Docker, git and
-# Python 3.10-3.13 -- plus curl, used here to check that the MCP endpoint really
+# Requirements: the union of what the examples need -- Docker and git -- plus curl, used here to check that the MCP endpoint really
 # answers. No API keys: OPENAI_API_KEY is deliberately unset, so agentic-graphrag
 # stops after its three atomic pipelines instead of launching the interactive
 # Streamlit app. GNU 'timeout' (or Homebrew's 'gtimeout') is used when present;
@@ -223,29 +222,18 @@ check_clean_agentic_graphrag() {
 }
 
 check_ai_memory() {
-  want "Memgraph came up" "Memgraph is up on bolt://localhost:7687"
-  want "Context Graph packages were installed" \
-    "installing sessions-graph, actions-graph, skills-graph"
-  want "all three memory types were written" "procedural  how it does things"
-  # The interconnected traversal is the whole point of the example: one query
-  # joining semantic + episodic + procedural. Every field must be populated.
-  want "joined recall: client facts" "what it knows  .*Dana Lee"
-  want "joined recall: last session" \
-    "last time      session-acme-followup: schedule_meeting at 2026-07-07"
-  want "joined recall: skill" "how to         schedule-follow-up"
-  want "joined recall: how-to" "^ +1\. Book a calendar slot"
-  want "joined recall: how-to, second step" "^ +2\. Send a calendar invite"
-  reject "joined recall has no null fields" "^  (what it knows|last time|how to) +(None|Null)"
-  want "final banner" "AI memory is live"
+  # Only the entry point: the logo, what is about to happen, and the command that
+  # starts Context Graph's setup (not run here: it would rewire this machine's agents).
+  want "logo drawn" "██║ ╚═╝ ██║"
+  want "graph drawn under the logo" "●───"
+  want "says what AI memory is" "AI memory: what an assistant knows"
+  want "says what setup will do" "Context Graph sets it up"
   want "setup was skipped, its command printed" "context-graph/scripts/install.sh \| bash"
-  reject "setup did not run" "Opening its setup"
-  want_no_query_errors
-  want_running aimemory-memgraph
+  reject "setup did not run" "Installing memgraph-context-graph"
 }
 
 check_clean_ai_memory() {
-  want_gone aimemory-memgraph
-  want_absent_path "$DIR/.ai-memory-venv"
+  :   # starts nothing, so there is nothing to clean
 }
 
 # ---- Runner -----------------------------------------------------------------
@@ -301,13 +289,13 @@ ports_for() {
   case "$1" in
     agentic-ai)       echo "7688" ;;
     agentic-graphrag) echo "7687 7444 8000" ;;
-    ai-memory)        echo "7687 7444" ;;
+    ai-memory)        echo "" ;;
   esac
 }
 
 # Containers the examples create themselves. Leftovers among these are fine:
 # each run starts with that example's own 'clean'.
-EXAMPLE_CONTAINERS="zero-demo-memgraph zero-demo-postgres zero-demo-memgql agenticgraphrag-memgraph agenticgraphrag-mcp aimemory-memgraph"
+EXAMPLE_CONTAINERS="zero-demo-memgraph zero-demo-postgres zero-demo-memgql agenticgraphrag-memgraph agenticgraphrag-mcp"
 
 # port_holder <port>  -- prints who holds the port (empty if free or ours):
 #   'container <name>' for a published port on a container that is not ours,
@@ -359,6 +347,7 @@ check_ports_free() {
 
 clean_example() {
   # Best effort: a failed run may have left the example's own clean path broken.
+  [ "$1" = ai-memory ] && return   # starts nothing
   "$DIR/$1.sh" clean >/dev/null 2>&1 || true
 }
 
@@ -416,7 +405,9 @@ run_example() {
     note "--keep: leaving $name's containers running"
   else
     note "tearing down"
-    if "$script" clean >>"$LOG" 2>&1; then
+    if [ "$name" = ai-memory ]; then
+      :
+    elif "$script" clean >>"$LOG" 2>&1; then
       pass "$name.sh clean exited 0"
     else
       fail "$name.sh clean failed"
@@ -460,9 +451,9 @@ for arg in "$@"; do
 done
 [ -n "$SELECTED" ] || SELECTED="$ALL_EXAMPLES"
 
-# agentic-graphrag and ai-memory both publish Bolt on host port 7687, so keeping
-# one example's containers alive makes the next one fail to start. Refuse the
-# combination rather than reporting it as a broken example.
+# The examples share host ports, so keeping one example's containers alive can make
+# the next one fail to start. Refuse the combination rather than reporting it as a
+# broken example.
 if [ "$KEEP" -eq 1 ]; then
   case "$SELECTED" in
     *" "*)
