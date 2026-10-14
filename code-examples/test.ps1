@@ -57,7 +57,7 @@ $Examples = @(
     [pscustomobject]@{
         Name    = 'ai-memory'
         Script  = 'ai-memory.ps1'
-        Marker  = 'Context Graph sets it up'
+        Marker  = 'Setup finds or starts Memgraph'
         Needs   = @()
     },
     [pscustomobject]@{

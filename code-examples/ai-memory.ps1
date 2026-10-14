@@ -23,8 +23,8 @@ $InstallUrl = 'https://raw.githubusercontent.com/memgraph/ai-toolkit/main/contex
 Write-Host ''
 Write-Host 'memgraph' -ForegroundColor DarkYellow
 Write-Host ''
-Write-Host 'AI memory: what an assistant knows, did, and knows how to do, as one graph.' -ForegroundColor DarkGray
-Write-Host 'Context Graph sets it up: it finds or starts Memgraph and connects your coding agents.' -ForegroundColor DarkGray
+Write-Host 'AI memory: your coding agents remember what they know, did and learned.' -ForegroundColor DarkGray
+Write-Host 'Setup finds or starts Memgraph, connects your agents, and asks first.' -ForegroundColor DarkGray
 Write-Host ''
 Write-Host 'In WSL or Git Bash, run:'
 Write-Host "  curl -fsSL $InstallUrl | bash"
