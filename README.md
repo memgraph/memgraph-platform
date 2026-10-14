@@ -47,7 +47,7 @@ docker exec -ti <container-id> mgconsole
 
 ## :bulb: Code examples
 
-Each example is a runnable version of one of the [Memgraph use cases](https://memgraph.com/use-cases): [GraphRAG](https://memgraph.com/graphrag), [AI Memory](https://memgraph.com/ai-memory) and [Agentic AI](https://memgraph.com/agentic-ai). Each is a self-contained, end-to-end demo: it starts Memgraph in Docker, loads data, and runs real queries. Docker is the only requirement (AI Memory only draws the logo and hands over to Context Graph's setup, which finds or starts Memgraph itself). The walkthroughs live in [`code-examples/`](https://github.com/memgraph/memgraph-platform/blob/main/code-examples/README.md).
+Each example is a runnable version of one of the [Memgraph use cases](https://memgraph.com/use-cases): [GraphRAG](https://memgraph.com/graphrag), [AI Memory](https://memgraph.com/ai-memory) and [Agentic AI](https://memgraph.com/agentic-ai). Each is a self-contained, end-to-end demo: it starts Memgraph in Docker, loads data, and runs real queries. Docker is the only requirement (AI Memory only hands over to Context Graph's setup, which finds or starts Memgraph itself). The walkthroughs live in [`code-examples/`](https://github.com/memgraph/memgraph-platform/blob/main/code-examples/README.md).
 
 | Example | Linux/macOS | Windows |
 | --- | --- | --- |
