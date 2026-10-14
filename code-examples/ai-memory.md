@@ -23,9 +23,9 @@ as those three kinds of memory, so they can recall them later.
 
 ## Run It
 
-`ai-memory.sh` is only the entry point. It draws the Memgraph logo, says what is
-about to happen, and starts Context Graph's setup, which does the rest: finds or
-starts Memgraph, and connects the agents you pick. It asks before it changes
+`ai-memory.sh` is only the entry point. It says what is about to
+happen and starts Context Graph's setup, which draws the Memgraph logo and does
+the rest: finds or starts Memgraph, and connects the agents you pick. It asks before it changes
 anything.
 
 macOS / Linux:
