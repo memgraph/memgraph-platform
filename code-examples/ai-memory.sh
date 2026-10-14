@@ -25,8 +25,8 @@ if [[ -t 1 && -z "${NO_COLOR:-}" ]]; then
   GRAY=$'\033[38;5;245m'; OFF=$'\033[0m'   # Memgraph's gray, #857F87
 fi
 
-printf '\n%sAI memory: what an assistant knows, did, and knows how to do, as one graph.%s\n' "$GRAY" "$OFF"
-printf '%sContext Graph sets it up: it finds or starts Memgraph and connects your coding agents.%s\n' "$GRAY" "$OFF"
+printf '\n%sAI memory: your coding agents remember what they know, did and learned.%s\n' "$GRAY" "$OFF"
+printf '%sSetup finds or starts Memgraph, connects your agents, and asks first.%s\n' "$GRAY" "$OFF"
 
 # Setup is interactive and asks before changing anything, so it only runs with a person at the terminal:
 # stdout a TTY and a /dev/tty to read keys from (piped into bash, stdin is this script).
