@@ -284,7 +284,8 @@ echo "Context Graph records Claude Code, Codex, Cursor and other agents' session
 echo "a Memgraph of its own (not this throwaway one) so they can recall them later."
 if [[ -z "${AI_MEMORY_SKIP_SETUP:-}" && -t 1 ]] && (exec </dev/tty) 2>/dev/null; then
   echo "Opening its setup; nothing changes until you confirm there."
-  if curl -fsSL "$CONTEXT_GRAPH_INSTALL_URL" | bash; then
+  # --no-banner: this script drew the Memgraph wordmark already (memgraph-context-graph >= 0.7.0).
+  if curl -fsSL "$CONTEXT_GRAPH_INSTALL_URL" | bash -s -- --no-banner; then
     # Setup installs the viewer unless it was unticked; offer it only when it's there.
     if memgraph-context-graph ui --version >/dev/null 2>&1; then
       printf '\nOpen the Context Graph viewer now? [Y/n] '
