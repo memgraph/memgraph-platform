@@ -222,10 +222,8 @@ check_clean_agentic_graphrag() {
 }
 
 check_ai_memory() {
-  # Only the entry point: the logo, what is about to happen, and the command that
+  # Only the entry point: what is about to happen, and the command that
   # starts Context Graph's setup (not run here: it would rewire this machine's agents).
-  want "logo drawn" "██║ ╚═╝ ██║"
-  want "graph drawn under the logo" "●───"
   want "says what AI memory is" "AI memory: what an assistant knows"
   want "says what setup will do" "Context Graph sets it up"
   want "setup was skipped, its command printed" "context-graph/scripts/install.sh \| bash"
