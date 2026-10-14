@@ -300,7 +300,7 @@ run_with_timeout() {
 ports_for() {
   case "$1" in
     agentic-ai)       echo "7688" ;;
-    agentic-graphrag) echo "7687 7444 8000" ;;
+    agentic-graphrag) echo "7687 8000" ;;
     ai-memory)        echo "7687 7444" ;;
   esac
 }

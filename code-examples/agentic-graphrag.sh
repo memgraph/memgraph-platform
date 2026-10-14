@@ -37,6 +37,8 @@
 #   ./agentic-graphrag.sh          # import + run the three atomic pipelines
 #                                   # (+ launch the agent app if OPENAI_API_KEY is set)
 #   ./agentic-graphrag.sh clean    # stop containers and remove the work dir
+#   MEMGRAPH_PORT=7688 MCP_PORT=8001 ./agentic-graphrag.sh  # explicit host ports
+# A busy default port falls back to a Docker-assigned port.
 #
 # If you have the script locally, use the `clean` command above. Piped straight
 # from the web (curl -sSL https://install.memgraph.com/agentic-graphrag | bash) there is no
@@ -53,7 +55,10 @@ MCP_IMAGE="memgraph/mcp-memgraph:0.2.0"
 NET="agenticgraphrag-net"
 DB="agenticgraphrag-memgraph"
 MCP="agenticgraphrag-mcp"
-MCP_PORT="8000"
+BOLT_PORT_EXPLICIT="${MEMGRAPH_PORT:+1}"
+BOLT_PORT="${MEMGRAPH_PORT:-7687}"
+MCP_PORT_EXPLICIT="${MCP_PORT:+1}"
+MCP_PORT="${MCP_PORT:-8000}"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 WORK="$SCRIPT_DIR/.agentic-graphrag-work"
@@ -75,6 +80,33 @@ fi
 
 log() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
 mg()  { docker run -i --rm --network "$NET" "$MGCONSOLE_IMAGE" --host "$DB" --port 7687; }
+
+# Starts a container that publishes CONTAINER_PORT on HOST_PORT and prints the
+# host port it got. If HOST_PORT is busy and wasn't set explicitly (ENV_VAR),
+# Docker assigns a free port instead; whatever owns HOST_PORT keeps running.
+#   run_published NAME HOST_PORT CONTAINER_PORT ENV_VAR EXPLICIT [docker run args...]
+run_published() {
+  local name=$1 host_port=$2 container_port=$3 env_var=$4 explicit=$5 output
+  shift 5
+  if output=$(docker run -d --name "$name" -p "${host_port}:${container_port}" "$@" 2>&1); then
+    echo "$host_port"
+    return
+  fi
+  if [[ "$output" != *"port is already allocated"* && "$output" != *"address already in use"* ]]; then
+    printf '%s\n' "$output" >&2
+    return 1
+  fi
+  # Docker keeps the failed container after a binding conflict. Remove only this
+  # attempt; never stop the process that already owns the requested port.
+  docker rm "$name" >/dev/null 2>&1 || true
+  if [[ -n "$explicit" ]]; then
+    echo "Port $host_port is already allocated; rerun with $env_var set to a free port." >&2
+    return 1
+  fi
+  echo "Port $host_port is already allocated -- asking Docker for a free port." >&2
+  docker run -d --name "$name" -p "$container_port" "$@" >/dev/null
+  docker inspect --format "{{(index (index .NetworkSettings.Ports \"${container_port}/tcp\") 0).HostPort}}" "$name"
+}
 
 teardown() {
   log "Stopping containers, removing network + work dir"
@@ -108,9 +140,9 @@ DATASET="$APP_DIR/asknews-finance-graph.cypherl"
 log "Starting Memgraph ($MAGE_IMAGE) with schema info enabled"
 docker rm -f "$DB" "$MCP" >/dev/null 2>&1 || true
 docker network create "$NET" >/dev/null 2>&1 || true
-docker run -d --name "$DB" --network "$NET" \
-  -p 7687:7687 -p 7444:7444 \
-  "$MAGE_IMAGE" --schema-info-enabled=True >/dev/null
+BOLT_PORT=$(run_published "$DB" "$BOLT_PORT" 7687 MEMGRAPH_PORT "$BOLT_PORT_EXPLICIT" \
+  --network "$NET" "$MAGE_IMAGE" --schema-info-enabled=True)
+echo "Memgraph is up on bolt://localhost:${BOLT_PORT}"
 
 log "Waiting for Memgraph to accept Bolt connections"
 until echo "RETURN 1;" | mg >/dev/null 2>&1; do sleep 1; done
@@ -135,10 +167,8 @@ echo "Imported. Memgraph now holds ${nodes} nodes."
 # This is the "MCP" from the outline: your own harness can load it as a tool and
 # query the same graph, instead of (or alongside) the Streamlit app below.
 log "Starting the Memgraph MCP server ($MCP_IMAGE)"
-docker run -d --name "$MCP" --network "$NET" \
-  -p "${MCP_PORT}:8000" \
-  --env MEMGRAPH_URL="bolt://${DB}:7687" \
-  "$MCP_IMAGE" >/dev/null
+MCP_PORT=$(run_published "$MCP" "$MCP_PORT" 8000 MCP_PORT "$MCP_PORT_EXPLICIT" \
+  --network "$NET" --env MEMGRAPH_URL="bolt://${DB}:7687" "$MCP_IMAGE")
 
 # 'docker run -d' returns as soon as the container exists, several seconds before
 # the HTTP server inside it is listening. The endpoint below is meant to be
@@ -192,7 +222,7 @@ cat <<EOF
 
 $(printf '\033[1;32m✓ GraphRAG retrieval pipelines ran against %s nodes.\033[0m' "${nodes}")
 
-Memgraph : bolt://localhost:7687   (knowledge graph loaded)
+Memgraph : bolt://localhost:${BOLT_PORT}   (knowledge graph loaded)
 MCP      : http://localhost:${MCP_PORT}/mcp/   (attach your own harness)
 
 Point your own harness (Claude Desktop / Cursor / VS Code) at the graph with:
@@ -210,6 +240,21 @@ To also run the agentic app (an LLM agent that classifies each question and pick
 one of the three pipelines above), set an OpenAI key and re-run:
   export OPENAI_API_KEY=sk-...
   $RUN_HINT
+
+Tear everything down when you are done:
+  $CLEAN_HINT
+EOF
+  exit 0
+fi
+
+# The app connects to bolt://localhost:7687, so it would read and write whatever
+# owns that port. Run it only when this demo's Memgraph is the one there.
+if [[ "$BOLT_PORT" != "7687" ]]; then
+  cat <<EOF >&2
+
+OPENAI_API_KEY is set, but the agentic app connects only to bolt://localhost:7687,
+and this demo's Memgraph is on port ${BOLT_PORT}. Free port 7687 and re-run to
+launch the app; the pipelines above already ran.
 
 Tear everything down when you are done:
   $CLEAN_HINT
