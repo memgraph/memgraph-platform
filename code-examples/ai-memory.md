@@ -34,9 +34,11 @@ macOS / Linux:
 curl -sSL https://install.memgraph.com/ai-memory | bash
 ```
 
-Windows runs Context Graph's setup from WSL or Git Bash; from PowerShell,
-`iwr https://install.memgraph.com/ai-memory/windows -useb | iex` prints the
-command to run there.
+Windows (PowerShell 5.1 or 7+):
+
+```powershell
+iwr https://install.memgraph.com/ai-memory/windows -useb | iex
+```
 
 The setup needs a terminal to ask its questions on. Without one (CI, output sent
 to a file), or with `AI_MEMORY_SKIP_SETUP=1`, the script only prints the command:
@@ -44,6 +46,8 @@ to a file), or with `AI_MEMORY_SKIP_SETUP=1`, the script only prints the command
 ```bash
 curl -fsSL https://raw.githubusercontent.com/memgraph/ai-toolkit/main/context-graph/scripts/install.sh | bash
 ```
+
+or, on Windows, `iwr https://raw.githubusercontent.com/memgraph/ai-toolkit/main/context-graph/scripts/install.ps1 -useb | iex`.
 
 ## After Setup
 
