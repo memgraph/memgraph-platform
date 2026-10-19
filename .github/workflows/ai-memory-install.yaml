@@ -15,6 +15,9 @@ on:
 
 jobs:
   urls:
+    # Compares the published copies with this repo, so a PR that changes a launcher always differs from
+    # what is published until it merges; it only means something on the nightly and manual runs.
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
