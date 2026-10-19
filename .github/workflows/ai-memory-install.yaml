@@ -1,0 +1,58 @@
+name: ai-memory install one-liners
+
+# Nightly check of what a user actually types. The published URLs are fetched and
+# compared with this repository, then the launchers run: without a terminal they
+# must print the command to run, and the command they print must be reachable.
+# The installers themselves are tested in memgraph/ai-toolkit.
+on:
+  schedule:
+    - cron: "17 4 * * *"
+  pull_request:
+    paths:
+      - "code-examples/ai-memory.*"
+      - ".github/workflows/ai-memory-install.yaml"
+  workflow_dispatch: {}
+
+jobs:
+  urls:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Published launchers match this repository
+        run: |
+          set -euo pipefail
+          curl -fsSL https://install.memgraph.com/ai-memory -o published.sh
+          curl -fsSL https://install.memgraph.com/ai-memory/windows -o published.ps1
+          diff published.sh code-examples/ai-memory.sh
+          diff published.ps1 code-examples/ai-memory.ps1
+
+      - name: The installers the launchers point at exist
+        run: |
+          set -euo pipefail
+          for script in install.sh install.ps1; do
+            curl -fsSL -o /dev/null "https://raw.githubusercontent.com/memgraph/ai-toolkit/main/context-graph/scripts/$script"
+          done
+
+  launcher:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Without a terminal, the launcher prints the command and installs nothing
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = Windows ]; then
+            out=$(powershell -NoProfile -File code-examples/ai-memory.ps1 < /dev/null 2>&1)
+            want='install.ps1'
+          else
+            out=$(bash code-examples/ai-memory.sh < /dev/null 2>&1)
+            want='install.sh'
+          fi
+          echo "$out"
+          grep -q "$want" <<<"$out"
+          ! command -v memgraph-context-graph
