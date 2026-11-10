@@ -45,6 +45,26 @@ To start `mgconsole`, run the following command:
 docker exec -ti <container-id> mgconsole
 ```
 
+## :robot: mgagent
+
+[mgagent](https://hub.docker.com/r/memgraph/mgagent) is Memgraph's AI assistant for your graph. To start the latest MAGE image together with the latest mgagent image, with mgagent already connected:
+
+**Linux/macOS**
+
+```
+curl -sSf https://install.memgraph.com/mgagent | sh
+```
+
+**Windows**
+
+```
+iwr https://install.memgraph.com/mgagent/windows -useb | iex
+```
+
+The scripts ([`mgagent.sh`](https://github.com/memgraph/memgraph-platform/blob/main/mgagent.sh), [`mgagent.ps1`](https://github.com/memgraph/memgraph-platform/blob/main/mgagent.ps1)) pass on any LLM provider settings already set in your shell (`$env:...` in PowerShell): `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `GOOGLE_API_KEY`, `DEEPSEEK_API_KEY`, `XAI_API_KEY`, `MISTRAL_API_KEY`, and the base URLs `ANTHROPIC_BASE_URL`, `OPENAI_BASE_URL`, `OLLAMA_HOST` and `OLLAMA_BASE_URL`. A base URL on `localhost` is rewritten to `host.docker.internal`, so a local Ollama or vLLM still works from inside the container. If none of them is set, mgagent asks for a provider and key on first run. Settings and history are kept in the `mgagent` Docker volume.
+
+Memgraph keeps running after you quit mgagent, at `bolt://localhost:7687` (set `MEMGRAPH_PORT` to choose a different port). Set `MGAGENT_WORKDIR=<dir>` to let mgagent read and import files from `<dir>`. Arguments after `sh -s --` go to mgagent, for example `sh -s -- -p "how many nodes are there?"`. To tear everything down, run `sh -s -- clean`. In PowerShell, `iex` can't pass arguments, so use the script block form: `& ([scriptblock]::Create((iwr https://install.memgraph.com/mgagent/windows -useb))) clean`.
+
 ## :bulb: Code examples
 
 Each example is a runnable version of one of the [Memgraph use cases](https://memgraph.com/use-cases): [GraphRAG](https://memgraph.com/graphrag), [AI Memory](https://memgraph.com/ai-memory) and [Agentic AI](https://memgraph.com/agentic-ai). Each is a self-contained, end-to-end demo: it starts Memgraph in Docker, loads data, and runs real queries. Docker is the only requirement (AI Memory only hands over to Context Graph's setup, which finds or starts Memgraph itself). The walkthroughs live in [`code-examples/`](https://github.com/memgraph/memgraph-platform/blob/main/code-examples/README.md).
